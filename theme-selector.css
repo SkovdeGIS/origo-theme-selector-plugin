@@ -1,0 +1,55 @@
+/* Layout only; colors, icons and button surfaces come from Origo. */
+.o-theme-selector {
+  position: relative;
+}
+
+.o-theme-selector-panel {
+  border-radius: .25rem;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+  left: calc(100% + .5rem);
+  max-height: 60vh;
+  max-width: min(18rem, 60vw);
+  overflow: auto;
+  padding: .5rem;
+  position: absolute;
+  top: 0;
+  width: max-content;
+  z-index: 100;
+}
+
+.o-theme-selector-panel[hidden] {
+  display: none;
+}
+
+.o-theme-selector-item {
+  align-items: center;
+  display: flex;
+  gap: .5rem;
+  min-height: 2.75rem;
+  position: relative;
+  text-align: left;
+}
+
+.o-theme-selector-item .icon {
+  flex: 0 0 1.25rem;
+  height: 1.25rem;
+  width: 1.25rem;
+}
+
+.o-theme-selector-label {
+  overflow-wrap: anywhere;
+}
+
+.o-theme-selector button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -2px;
+}
+
+.o-theme-selector-item[aria-pressed='true'] .o-theme-selector-label {
+  font-weight: bold;
+  text-decoration: underline;
+}
+
