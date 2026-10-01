@@ -340,10 +340,10 @@
     }
 
     function icon(reference) {
-      const value = reference || options.icon || '#ic_layers_24px';
+      const value = reference || options.icon || '#o_legend_24px';
       if (typeof value === 'string' && /^#[A-Za-z_][\w:.-]*$/.test(value)) return value;
-      warn('Icons must be SVG symbol references such as #ic_map_24px; using default.');
-      return '#ic_layers_24px';
+      warn('Icons must be SVG symbol references; using the default icon.');
+      return '#o_legend_24px';
     }
 
     function listen(element, event, handler, options) {
