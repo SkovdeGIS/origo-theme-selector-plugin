@@ -1,5 +1,10 @@
 # Origo Theme Selector
 
+[![License](https://img.shields.io/github/license/SkovdeGIS/origo-theme-selector-plugin?style=flat-square)](LICENSE)
+[![Tested with Origo 2.11.0-dev](https://img.shields.io/badge/tested-Origo%202.11.0--dev-2E8B57?style=flat-square)](#requirements)
+[![No build step](https://img.shields.io/badge/build-no%20build%20step-brightgreen?style=flat-square)](#installation)
+[![Latest commit](https://img.shields.io/github/last-commit/SkovdeGIS/origo-theme-selector-plugin?style=flat-square)](https://github.com/SkovdeGIS/origo-theme-selector-plugin/commits/main)
+
 A theme selector for Origo maps. Each theme can enable groups or individual
 layers, select a background, set source filters and move the map.
 Load the JavaScript and CSS directly; there is no install or build step.
@@ -11,7 +16,9 @@ Developed against Origo `2.11.0-dev`, commit
 and tested with the browser distribution in that checkout.
 Older releases have not been verified.
 
-Use a current browser with ResizeObserver support.
+Use a current browser supported by Origo. `ResizeObserver` keeps the panel
+positioned when an embedded map changes size; without it, the plugin still
+works and repositions on window resize and scroll.
 
 ## Installation
 
