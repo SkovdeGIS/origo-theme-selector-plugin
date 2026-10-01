@@ -11,8 +11,8 @@
   const isObject = value => value && typeof value === 'object' && !Array.isArray(value);
   const isLayer = value => value && typeof value.getVisible === 'function'
     && typeof value.setVisible === 'function';
-  const same = (a, b) => Array.isArray(a) && Array.isArray(b)
-    ? a.length === b.length && a.every((value, i) => value === b[i]) : a === b;
+  const same = (a, b) => a instanceof Map && b instanceof Map
+    ? a.size === b.size && Array.from(a).every(([key, value]) => b.has(key) && b.get(key) === value) : a === b;
 
   function ThemeSelector(options = {}) {
     if (!isObject(options)) {
@@ -30,6 +30,7 @@
     let localization;
     let root;
     let panel;
+    let mainTarget;
     let mainButton;
     let mainElement;
     let writing = false;
@@ -147,10 +148,11 @@
         if (targets.length !== 1) {
           warn('Background in "' + theme.name + '" must identify exactly one background layer.');
         } else {
+          // Key snapshots by layer identity; collection order can change between activations.
           claims.set(backgroundKey, {
-            kind: 'background', value: backgrounds.map(layer => layer === targets[0]),
-            read: () => backgrounds.map(layer => layer.getVisible()),
-            write: values => backgrounds.forEach((layer, i) => layer.setVisible(values[i])),
+            kind: 'background', value: new Map(backgrounds.map(layer => [layer, layer === targets[0]])),
+            read: () => new Map(backgrounds.map(layer => [layer, layer.getVisible()])),
+            write: values => values.forEach((visible, layer) => layer.setVisible(visible)),
             watch: backgrounds
           });
         }
@@ -334,6 +336,7 @@
       label({ element: mainElement }, buttonTitle());
       panel.setAttribute('aria-label', buttonTitle());
       buttons.forEach((button, name) => label(button, localizeTitle(themes.get(name).title, name)));
+      positionPanel();
     }
 
     function icon(reference) {
@@ -343,32 +346,32 @@
       return '#ic_layers_24px';
     }
 
-    function listen(element, event, handler) {
-      element.addEventListener(event, handler);
-      disposers.push(() => element.removeEventListener(event, handler));
+    function listen(element, event, handler, options) {
+      element.addEventListener(event, handler, options);
+      disposers.push(() => element.removeEventListener(event, handler, options));
     }
 
     function positionPanel() {
-      if (panel.hidden) return;
-      const bounds = document.getElementById(viewer.getMain().getId()).getBoundingClientRect();
-      const anchor = root.getBoundingClientRect();
+      if (!panel || panel.hidden) return;
+      const bounds = mainTarget.getBoundingClientRect();
+      const anchor = mainElement.getBoundingClientRect();
       const right = bounds.right - anchor.right - 12;
       const left = anchor.left - bounds.left - 12;
       const useLeft = left > right;
-      panel.style.left = useLeft ? 'auto' : 'calc(100% + .5rem)';
-      panel.style.right = useLeft ? 'calc(100% + .5rem)' : 'auto';
       panel.style.maxWidth = Math.max(0, useLeft ? left : right) + 'px';
       panel.style.maxHeight = Math.max(0, bounds.height - 16) + 'px';
-      const height = panel.getBoundingClientRect().height;
-      panel.style.top = Math.max(bounds.top + 8 - anchor.top,
-        Math.min(0, bounds.bottom - 8 - anchor.top - height)) + 'px';
+      const size = panel.getBoundingClientRect();
+      panel.style.left = (useLeft ? anchor.left - bounds.left - size.width - 8
+        : anchor.right - bounds.left + 8) + 'px';
+      panel.style.top = Math.max(8, Math.min(anchor.top - bounds.top,
+        bounds.height - 8 - size.height)) + 'px';
     }
 
     function setOpen(open, focus = false) {
       panel.hidden = !open;
       mainElement.setAttribute('aria-expanded', String(open));
       mainButton.setState(open ? 'active' : 'initial');
-      if (open) { refreshLocale(); positionPanel(); }
+      if (open) refreshLocale();
       if (focus) {
         if (open && buttons.size) buttons.values().next().value.element.focus();
         else mainElement.focus();
@@ -390,6 +393,7 @@
     }
 
     function mount(component, target) {
+      mainTarget = document.getElementById(viewer.getMain().getId());
       root = document.createElement('div');
       root.id = component.getId();
       root.className = 'o-theme-selector';
@@ -414,15 +418,18 @@
         buttons.set(theme.name, button);
         panel.appendChild(button.element);
       });
-      root.appendChild(panel);
       target.appendChild(root);
+      // Navigation can scroll and use a fade mask. Keep the popup in Origo's main target.
+      mainTarget.appendChild(panel);
       component.dispatch('render');
       refreshLocale();
       paint();
       const resize = new ResizeObserver(positionPanel);
-      resize.observe(document.getElementById(viewer.getMain().getId()));
+      resize.observe(mainTarget);
       disposers.push(() => resize.disconnect());
-      listen(root, 'keydown', event => {
+      listen(mainTarget, 'scroll', positionPanel, true);
+      const contains = element => root.contains(element) || panel.contains(element);
+      const onKeydown = event => {
         if (event.key === 'Escape' && !panel.hidden) {
           event.preventDefault();
           event.stopPropagation();
@@ -430,13 +437,27 @@
         } else if (event.target === mainElement && event.key === 'ArrowDown') {
           event.preventDefault();
           setOpen(true, true);
+        } else if (event.key === 'Tab' && !panel.hidden) {
+          const items = Array.from(buttons.values());
+          if (!event.shiftKey && event.target === mainElement && items.length) {
+            event.preventDefault();
+            items[0].element.focus();
+          } else if (event.shiftKey && items.length && event.target === items[0].element) {
+            event.preventDefault();
+            setOpen(false, true);
+          } else if (!event.shiftKey && items.length && event.target === items[items.length - 1].element) {
+            // Let the browser continue from the toggle to the next map control.
+            setOpen(false, true);
+          }
         }
+      };
+      const onFocusout = event => { if (!contains(event.relatedTarget)) setOpen(false); };
+      [root, panel].forEach(element => {
+        listen(element, 'keydown', onKeydown);
+        listen(element, 'focusout', onFocusout);
       });
       listen(document, 'pointerdown', event => {
-        if (!root.contains(event.target)) setOpen(false);
-      });
-      listen(root, 'focusout', event => {
-        if (!root.contains(event.relatedTarget)) setOpen(false);
+        if (!contains(event.target)) setOpen(false);
       });
     }
 
@@ -448,11 +469,13 @@
       disposers.splice(0).forEach(dispose => dispose());
       this.clearComponents();
       root.remove();
+      panel.remove();
       buttons.clear();
       instances.delete(viewer);
       viewer = null;
       root = null;
       panel = null;
+      mainTarget = null;
       mainButton = null;
       mainElement = null;
       localization = null;
