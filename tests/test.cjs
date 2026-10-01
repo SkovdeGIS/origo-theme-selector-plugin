@@ -1,4 +1,4 @@
-﻿/* Run: node tests/test.cjs ../origo-master-refrence-read-only [path-to-chrome] */
+﻿/* Run: node tests/test.cjs ../origo [path-to-chrome] */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -6,7 +6,7 @@ const http = require('node:http');
 const { spawn } = require('node:child_process');
 
 const pluginRoot = path.resolve(__dirname, '..');
-const coreRoot = path.resolve(process.argv[2] || '../origo-master-refrence-read-only', 'build');
+const coreRoot = path.resolve(process.argv[2] || '../origo', 'build');
 const chrome = process.argv[3] || [
   'C:/Program Files/Google/Chrome/Application/chrome.exe',
   '/usr/bin/chromium', '/usr/bin/google-chrome'
