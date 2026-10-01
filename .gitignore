@@ -1,0 +1,5 @@
+# Local input documents; keep out of the public repository.
+/.browser-test-*
+/.browser-preview-*
+.DS_Store
+Thumbs.db
