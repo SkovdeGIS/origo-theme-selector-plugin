@@ -6,8 +6,10 @@ Load the JavaScript and CSS directly; there is no install or build step.
 
 ## Requirements
 
-Developed against the local Origo `2.11.0-dev` source and tested with its
-included browser distribution. Older releases have not been verified.
+Developed against Origo `2.11.0-dev`, commit
+[`728cbc6`](https://github.com/origo-map/origo/tree/728cbc6b3ce6e68debb73d0cfc3d3d03fd1394af),
+and tested with the browser distribution in that checkout.
+Older releases have not been verified.
 
 Use a current browser with ResizeObserver support.
 
@@ -18,8 +20,7 @@ Copy `theme-selector.js` and `theme-selector.css` to
 Origo's stylesheet and the script after Origo.
 
 These are the only two files needed to run the plugin. The `examples/` folder
-contains a sample map, and `tests/` contains checks for development. Neither
-folder nor Node.js is required in your Origo installation.
+contains an optional sample map for demonstration and manual testing.
 
 Add the stylesheet, plugin script and `ThemeSelector` setup to your existing
 `index.html`, following the example below. Keep your existing `Origo('index.json')`
@@ -207,29 +208,36 @@ Tab navigates between buttons; Enter or Space toggles them. Arrow Down on the
 main button opens the selector and focuses its first item. Escape closes it
 and returns focus. Clicking outside or moving focus outside also closes it.
 
-## Limits and testing
+## Limitations
 
-Use one selector per viewer. Themes resolve layers at activation time; changes
-to the layer collection or source objects while themes are active are not
-tracked. Deactivate themes before replacing layers or backgrounds, then
-activate them again. Active themes are not stored in permalinks.
+Use one selector per viewer. Reordering existing layers is supported. Themes
+resolve layers at activation time; adding/removing layers or replacing source
+objects while themes are active is not tracked. Deactivate themes before these
+changes, then activate them again. Active themes are not stored in permalinks.
 
-Run the browser tests with Node 22 or newer, Chrome/Chromium and an existing
-built Origo checkout. No npm packages are needed:
+## Testing
 
-```sh
-node --check theme-selector.js
-node tests/test.cjs ../origo-master-refrence-read-only
-# Optional third argument: full path to Chrome/Chromium
-```
+Open `examples/index.html` in your Origo installation as described above.
+Use the example for these manual checks:
 
-The test reads Origo's `build/` directory, serves both projects on loopback,
-and runs against the real Viewer, UI and OpenLayers objects. It checks state,
-WFS filter restoration, invalid configuration, localization, keyboard behavior,
-cleanup and narrow layouts. Its temporary browser profile is removed on exit.
+- Toggle Planning on and off. Its polygon should appear and disappear;
+  Buildings should stay off because it is excluded.
+- Activate Planning and Buildings, then Nature. Buildings should stay on,
+  while Nature replaces Planning.
+- Deactivate Nature. The background selection in the legend should return
+  to Plain background. Both example backgrounds are empty placeholders.
+- Activate Nature again, then hide its layer in the legend. The theme should
+  deactivate and release its background. Buildings should remain on.
+- Switch between Swedish and English in Origo's language menu. The theme
+  buttons and selector title should use the selected language after the reload.
+- Navigate with Tab and Shift+Tab, toggle themes with Enter or Space, and close
+  the selector with Escape. Check that focus returns to the main button.
+- Try a narrow and short map window and a touch device. All theme buttons
+  should remain reachable, with scrolling when needed.
 
-For a manual check, open the example, combine Buildings with Planning or Nature,
-toggle layers in Origo's legend, switch languages and navigate with the keyboard.
+The example uses GeoJSON. If your configuration uses filters, also check
+filter application and restoration with your own WFS layers, including two
+themes sharing a source.
 
 ## License
 
