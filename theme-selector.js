@@ -227,12 +227,12 @@
     }
 
     function paint() {
+      const hasActiveTheme = active.size > 0;
+      mainButton.setState(hasActiveTheme ? 'active' : 'initial');
       buttons.forEach((button, name) => {
         const pressed = active.has(name);
         button.component.setState(pressed ? 'active' : 'initial');
         button.element.setAttribute('aria-pressed', String(pressed));
-        button.element.classList.toggle('primary', pressed);
-        button.element.classList.toggle('light', !pressed);
       });
     }
 
@@ -353,24 +353,23 @@
 
     function positionPanel() {
       if (!panel || panel.hidden) return;
-      const bounds = mainTarget.getBoundingClientRect();
       const anchor = mainElement.getBoundingClientRect();
-      const right = bounds.right - anchor.right - 12;
-      const left = anchor.left - bounds.left - 12;
-      const useLeft = left > right;
-      panel.style.maxWidth = Math.max(0, useLeft ? left : right) + 'px';
-      panel.style.maxHeight = Math.max(0, bounds.height - 16) + 'px';
+      const viewportWidth = document.documentElement.clientWidth;
+      const viewportHeight = document.documentElement.clientHeight;
+      const gap = 8;
+      panel.style.maxWidth = Math.max(0, viewportWidth - gap * 2) + 'px';
       const size = panel.getBoundingClientRect();
-      panel.style.left = (useLeft ? anchor.left - bounds.left - size.width - 8
-        : anchor.right - bounds.left + 8) + 'px';
-      panel.style.top = Math.max(8, Math.min(anchor.top - bounds.top,
-        bounds.height - 8 - size.height)) + 'px';
+      const spaceRight = viewportWidth - anchor.right - gap;
+      const spaceLeft = anchor.left - gap;
+      const useLeft = size.width > spaceRight && spaceLeft > spaceRight;
+      const left = useLeft ? anchor.left - size.width - gap : anchor.right + gap;
+      panel.style.left = Math.max(gap, Math.min(left, viewportWidth - size.width - gap)) + 'px';
+      panel.style.top = Math.max(gap, Math.min(anchor.top, viewportHeight - size.height - gap)) + 'px';
     }
 
     function setOpen(open, focus = false) {
       panel.hidden = !open;
       mainElement.setAttribute('aria-expanded', String(open));
-      mainButton.setState(open ? 'active' : 'initial');
       if (open) refreshLocale();
       if (focus) {
         if (open && buttons.size) buttons.values().next().value.element.focus();
@@ -388,7 +387,9 @@
       disposers.push(() => button.un('click', click));
       const element = ui.dom.html(button.render()).firstElementChild;
       element.type = 'button';
-      element.querySelector('svg').setAttribute('aria-hidden', 'true');
+      const svg = element.querySelector('svg');
+      svg.classList.add('o-icon-24');
+      svg.setAttribute('aria-hidden', 'true');
       return { component: button, element };
     }
 
@@ -396,10 +397,10 @@
       mainTarget = document.getElementById(viewer.getMain().getId());
       root = document.createElement('div');
       root.id = component.getId();
-      root.className = 'o-theme-selector';
+      root.className = 'o-theme-selector o-toolbar';
       panel = document.createElement('div');
       panel.id = root.id + '-panel';
-      panel.className = 'o-theme-selector-panel bg-white box-shadow';
+      panel.className = 'o-theme-selector-panel o-toolbar';
       panel.setAttribute('role', 'group');
       panel.hidden = true;
       const main = createButton(component, options.icon, () => setOpen(panel.hidden),
@@ -411,7 +412,7 @@
       root.appendChild(mainElement);
       themes.forEach(theme => {
         const button = createButton(component, theme.icon, () => component.toggle(theme.name),
-          'o-theme-selector-item light');
+          'o-theme-selector-item padding-small icon-smaller light round box-shadow');
         button.text = document.createElement('span');
         button.text.className = 'o-theme-selector-label';
         button.element.appendChild(button.text);
@@ -419,7 +420,6 @@
         panel.appendChild(button.element);
       });
       target.appendChild(root);
-      // Navigation can scroll and use a fade mask. Keep the popup in Origo's main target.
       mainTarget.appendChild(panel);
       component.dispatch('render');
       refreshLocale();
@@ -428,6 +428,8 @@
       resize.observe(mainTarget);
       disposers.push(() => resize.disconnect());
       listen(mainTarget, 'scroll', positionPanel, true);
+      listen(window, 'resize', positionPanel);
+      listen(window, 'scroll', positionPanel, true);
       const contains = element => root.contains(element) || panel.contains(element);
       const onKeydown = event => {
         if (event.key === 'Escape' && !panel.hidden) {
