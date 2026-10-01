@@ -87,103 +87,101 @@ placeholder; replace it with your own background layer for imagery.
 
 ## Configuration
 
-| Option | Default | Meaning |
-| --- | --- | --- |
-| `themes` | Required | Array of theme definitions. |
-| `exclusive` | `true` | Activating a non-combinable theme replaces other non-combinable themes. |
-| `target` | Origo navigation | Existing element ID, without `#`. Keep it inside the map. |
-| `icon` | `#ic_layers_24px` | Main button icon and default theme icon. |
+| Option | Required | Default | Meaning |
+| --- | --- | --- | --- |
+| `themes` | Yes | None | Array of theme definitions. |
+| `exclusive` | No | `true` | Activating a non-combinable theme replaces other non-combinable themes. |
+| `target` | No | Origo navigation | Existing element ID, without `#`. Keep it inside the map. |
+| `icon` | No | `#ic_layers_24px` | Main button icon and default theme icon. |
+| `localization` | No | Origo localization control | Localization control used for button labels and theme titles. |
 
-| Theme option | Meaning |
-| --- | --- |
-| `name` | Required unique name used by the API. |
-| `title` | Plain string or locale-to-string object. Defaults to `name`. |
-| `icon` | SVG symbol reference, such as `#ic_map_24px`. |
-| `groups` | Origo group names, including their descendant groups. |
-| `layers` | Explicit layer names or actual OpenLayers layer objects. |
-| `exclude` | Names or objects excluded from group selection. An explicit `layers` entry takes precedence. |
-| `background` | A name or object identifying exactly one layer in the `background` group. |
-| `filters` | Layer-name-to-filter-string object, or `[{ layer, value }]`. |
-| `center`, `zoom` | Two finite coordinates in the map projection, and a finite zoom level. Both are required. |
-| `combinable` | Defaults to `false`. This theme can coexist with exclusive themes. |
+| Theme option | Required | Default | Meaning |
+| --- | --- | --- | --- |
+| `name` | Yes | None | Unique non-empty name used by the API. |
+| `title` | No | `name` | Plain string or locale-to-string object. |
+| `icon` | No | Top-level `icon` | SVG symbol reference, such as `#ic_map_24px`. |
+| `groups` | No | `[]` | Origo group names, including their descendant groups. |
+| `layers` | No | `[]` | Explicit layer names or actual OpenLayers layer objects. |
+| `exclude` | No | `[]` | Names or objects excluded from group selection. An explicit `layers` entry takes precedence. |
+| `background` | No | Unchanged | A name or object identifying exactly one layer in the `background` group. |
+| `filters` | No | Unchanged | Layer-name-to-filter-string object, or `[{ layer, value }]`. |
+| `center`, `zoom` | Together, if used | Unchanged | Two finite coordinates in the map projection, and a finite zoom level. |
+| `combinable` | No | `false` | This theme can coexist with exclusive themes. |
 
-Group selection works on layer objects, so two occurrences of a name in
-different groups stay separate. Explicit names in `layers` select every
-matching occurrence. Pass an actual object when you need one specific occurrence.
-An excluded layer is left alone; exclusion does not force an already visible
-layer off.
+Groups include descendant groups. `exclude` applies to group selection, while
+explicit `layers` entries take precedence. Names matching multiple layers select
+all matches; pass a layer object to target one specific instance.
 
-An OpenLayers GROUP layer can be selected as one layer. Selecting a child also
-enables its parent containers and restores their previous visibility later.
-Enabling a parent can expose other children whose own visibility is already on.
+### Icons
 
-Icons use Origo's loaded SVG sprites. For a custom icon, add a uniquely named
-`<symbol>` to your installation's `custom.svg` and reference its ID.
+Icons reference SVG symbols loaded by Origo, for example `#ic_layers_24px`,
+`#ic_map_24px` or `#ic_home_24px`. Custom symbols must be added to a loaded
+sprite first.
 
-Invalid theme names are skipped. Invalid view settings, missing layers/groups,
-ambiguous backgrounds and unsupported filters generate console warnings.
-Layer references are checked when a theme is activated.
+## Examples
 
-## State and filters
+Select a whole group, including its child groups:
 
-Only selected properties change. Shared layers stay enabled until their last
-owner releases them. For conflicting backgrounds or filters, the most recently
-activated theme wins; removing it reveals the previous owner's setting.
-Filters are replaced, not combined with AND or OR.
+```js
+{ name: 'planning', groups: ['planning'] }
+```
 
-The first owner saves the previous value. The last owner restores it unless
-the user or other code has changed it in the meantime. Manual visibility changes
-are retained. Turning off all selected layers automatically deactivates that
-theme and releases its filters and background. This synchronization runs after
-the current batch of visibility events.
-
-Activating a new theme re-applies that theme's requested settings. Unrelated
-theme changes leave manual overrides alone. Camera position is an activation
-action and is not restored when a theme is deactivated.
-
-Filtering requires a source with `setFilter()` and a readable filter through
-`getFilter()` or `getOptions().filter`. The inspected Origo WFS source provides
-`setFilter()`, `clearFilter()` and `getOptions()`. Filter syntax follows the
-source's `filterType`, for example CQL or QGIS expressions. WMS, ordinary GeoJSON
-and cluster wrappers do not gain filter support from this plugin.
+Select a group but leave one layer out. Explicit `layers` entries take
+precedence over `exclude`:
 
 ```js
 {
-  name: 'open-parks',
-  layers: ['parks'],
-  filters: { parks: "status = 'open'" }
+  name: 'environment',
+  groups: ['environment'],
+  exclude: ['protected_areas']
 }
 ```
 
-For duplicate names, filters prefer the occurrences selected by the theme.
-If none are selected, the name matches all occurrences. Use
-`filters: [{ layer: exactLayerObject, value: "status = 'open'" }]` for an exact
-target. Ownership is tracked by source object because multiple layers can share
-one source. External filter changes are detected before the next theme change
-or cleanup; the source has no dedicated filter-change event.
+Select a background and open the map at a useful position. Coordinates use the
+map's projection:
+
+```js
+{
+  name: 'aerial',
+  background: 'orthophoto',
+  center: [435000, 6485000],
+  zoom: 12
+}
+```
+
+Filter a supported source, such as an Origo WFS layer. The expression follows
+that source's filter type (for example CQL or QGIS); the plugin does not add
+filter support to WMS or ordinary GeoJSON sources:
+
+```js
+{
+  name: 'open-water',
+  layers: ['water_areas'],
+  filters: { water_areas: "status = 'open'" }
+}
+```
+
+Keep a theme active alongside exclusive themes:
+
+```js
+{ name: 'emergency-sites', layers: ['shelters'], combinable: true }
+```
 
 ## Localization
 
-The plugin registers Swedish and English defaults under
-`plugins.themeSelector` using `localization.addPluginToLocale()`, and reads
-strings with `getStringByKeys()`. Existing plugin translations are preserved.
+Swedish and English button labels are registered with Origo's localization
+control. Theme titles can be strings or locale maps; missing titles fall back
+to English, Swedish, then the theme name.
 
 ```js
 var localization = viewer.getControlByName('localization');
-localization.addPluginToLocale('en-US', {
-  themeSelector: { buttonTitle: 'Map themes' }
-});
+localization.addPluginToLocale('en-US', { themeSelector: { buttonTitle: 'Map themes' } });
 themeSelector.refreshLocale();
 ```
 
-Theme titles use the current locale ID. Missing translations fall back to
-English, Swedish, then the theme name. Other locale IDs can be added to a title
-object and to Origo's localization control.
-
-The inspected Origo language menu reloads the page. It has no runtime
-language-change event. If your application successfully changes the locale
-programmatically, call `themeSelector.refreshLocale()` afterwards. Opening the
-selector also refreshes its text.
+Add other locales to the title objects and Origo localization control. Origo's
+language menu reloads the page; after changing locale programmatically, call
+`refreshLocale()`.
 
 ## API
 
@@ -200,44 +198,20 @@ themeSelector.refreshLocale();
 viewer.removeComponent(themeSelector); // Restore state, detach listeners and remove UI
 ```
 
-`activate`, `deactivate` and `toggle` return whether the active set changed.
-Activating an already active theme is a no-op. Buttons and API calls use the
-same exclusivity rules. A removed component can be added again.
+The activation methods return whether the active set changed. `getActive()`
+returns names in activation order. A removed component can be added again.
 
-Tab navigates between buttons; Enter or Space toggles them. Arrow Down on the
-main button opens the selector and focuses its first item. Escape closes it
-and returns focus. Clicking outside or moving focus outside also closes it.
+## Known limitations
 
-## Limitations
-
-Use one selector per viewer. Reordering existing layers is supported. Themes
-resolve layers at activation time; adding/removing layers or replacing source
-objects while themes are active is not tracked. Deactivate themes before these
-changes, then activate them again. Active themes are not stored in permalinks.
-
-## Testing
-
-Open `examples/index.html` in your Origo installation as described above.
-Use the example for these manual checks:
-
-- Toggle Planning on and off. Its polygon should appear and disappear;
-  Buildings should stay off because it is excluded.
-- Activate Planning and Buildings, then Nature. Buildings should stay on,
-  while Nature replaces Planning.
-- Deactivate Nature. The background selection in the legend should return
-  to Plain background. Both example backgrounds are empty placeholders.
-- Activate Nature again, then hide its layer in the legend. The theme should
-  deactivate and release its background. Buildings should remain on.
-- Switch between Swedish and English in Origo's language menu. The theme
-  buttons and selector title should use the selected language after the reload.
-- Navigate with Tab and Shift+Tab, toggle themes with Enter or Space, and close
-  the selector with Escape. Check that focus returns to the main button.
-- Try a narrow and short map window and a touch device. All theme buttons
-  should remain reachable, with scrolling when needed.
-
-The example uses GeoJSON. If your configuration uses filters, also check
-filter application and restoration with your own WFS layers, including two
-themes sharing a source.
+- Use one selector per viewer.
+- Themes resolve layers at activation time. Reordering existing layers is
+  supported; adding/removing layers or replacing source objects while themes
+  are active is not tracked. Deactivate themes before these changes, then
+  activate them again.
+- Active theme names are not saved in permalinks or restored after a reload.
+- Filters require a source with `setFilter()` and `getFilter()` or
+  `getOptions().filter`. WMS and ordinary GeoJSON sources are not filterable
+  through this plugin.
 
 ## License
 
