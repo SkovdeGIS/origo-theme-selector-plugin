@@ -9,6 +9,8 @@ A theme selector for Origo maps. Each theme can enable groups or individual
 layers, select a background, set source filters and move the map.
 Load the JavaScript and CSS directly; there is no install or build step.
 
+![Origokommuner, Mask, and the combined Båda preset selected in sequence](examples/theme-selector-toggle.gif)
+
 ## Requirements
 
 Developed against Origo `2.11.0-dev`, commit
@@ -59,20 +61,21 @@ in `index.json`.
           {
             name: 'planning',
             title: { 'sv-SE': 'Planering', 'en-US': 'Planning' },
-            icon: '#ic_map_24px',
+            icon: '#ic_place_24px',
             groups: ['planning'],
             exclude: ['buildings']
           },
           {
             name: 'nature',
             title: { 'sv-SE': 'Natur', 'en-US': 'Nature' },
+            icon: '#o_polygon_24px',
             layers: ['nature'],
             background: 'orthophoto'
           },
           {
             name: 'buildings',
             title: { 'sv-SE': 'Byggnader', 'en-US': 'Buildings' },
-            icon: '#ic_home_24px',
+            icon: '#baseline-select-all-24px',
             layers: ['buildings'],
             combinable: true
           }
@@ -99,7 +102,7 @@ placeholder; replace it with your own background layer for imagery.
 | `themes` | Yes | None | Array of theme definitions. |
 | `exclusive` | No | `true` | Activating a non-combinable theme replaces other non-combinable themes. |
 | `target` | No | Origo navigation | Existing element ID, without `#`. Keep it inside the map. |
-| `icon` | No | `#ic_layers_24px` | Main button icon and default theme icon. |
+| `icon` | No | `#o_legend_24px` | Main button icon and default theme icon. |
 | `localization` | No | Origo localization control | Localization control used for button labels and theme titles. |
 
 | Theme option | Required | Default | Meaning |
@@ -122,20 +125,20 @@ all matches; pass a layer object to target one specific instance.
 ### Icons
 
 Set `icon` to the exact SVG symbol ID, including its leading `#`. For example,
-the Origo build used by this sample provides `#ic_layers_24px`, `#ic_map_24px`
-and `#ic_home_24px`:
+the Origo build used by this sample provides `#o_legend_24px`, `#ic_place_24px`,
+`#o_polygon_24px` and `#baseline-select-all-24px`:
 
 ```js
 {
   name: 'planning',
   title: 'Planning',
-  icon: '#ic_map_24px',
+  icon: '#ic_place_24px',
   groups: ['planning']
 }
 ```
 
 If a theme omits `icon`, it uses the top-level icon; if both omit it, the
-plugin uses `#ic_layers_24px`. Symbol IDs vary between Origo builds, so use an
+plugin uses `#o_legend_24px`. Symbol IDs vary between Origo builds, so use an
 ID present in the SVG sprite loaded by your map. The plugin checks the `#id`
 format but cannot check whether the sprite contains that ID; an unknown ID
 renders without an icon. Add custom symbols to a sprite loaded by Origo before
