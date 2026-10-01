@@ -1,0 +1,283 @@
+﻿{
+  "projectionCode": "EPSG:3857",
+  "extent": [
+    -20037508,
+    -20037508,
+    20037508,
+    20037508
+  ],
+  "center": [
+    0,
+    0
+  ],
+  "zoom": 3,
+  "controls": [
+    {
+      "name": "mapmenu"
+    },
+    {
+      "name": "legend"
+    },
+    {
+      "name": "localization",
+      "options": {
+        "showLocMenu": true
+      }
+    }
+  ],
+  "groups": [
+    {
+      "name": "background",
+      "title": "Backgrounds"
+    },
+    {
+      "name": "planning",
+      "title": "Planning"
+    },
+    {
+      "name": "nature",
+      "title": "Nature"
+    }
+  ],
+  "styles": {
+    "planning": [
+      [
+        {
+          "fill": {
+            "color": "rgba(30,100,220,0.3)"
+          },
+          "stroke": {
+            "color": "#1e64dc",
+            "width": 2
+          }
+        }
+      ]
+    ],
+    "nature": [
+      [
+        {
+          "fill": {
+            "color": "rgba(20,130,70,0.4)"
+          },
+          "stroke": {
+            "color": "#148246",
+            "width": 2
+          }
+        }
+      ]
+    ],
+    "buildings": [
+      [
+        {
+          "fill": {
+            "color": "#97592f"
+          }
+        }
+      ]
+    ],
+    "default": [
+      [
+        {
+          "fill": {
+            "color": "rgba(128,128,128,0.2)"
+          },
+          "stroke": {
+            "color": "#666666",
+            "width": 1
+          }
+        }
+      ]
+    ],
+    "background": [
+      [
+        {
+          "image": {
+            "src": "img/png/farg.png"
+          }
+        }
+      ]
+    ]
+  },
+  "layers": [
+    {
+      "name": "plain",
+      "title": "Plain background",
+      "group": "background",
+      "type": "GEOJSON",
+      "visible": true,
+      "features": {
+        "type": "FeatureCollection",
+        "features": []
+      },
+      "style": "background"
+    },
+    {
+      "name": "orthophoto",
+      "title": "Orthophoto placeholder (empty)",
+      "group": "background",
+      "type": "GEOJSON",
+      "visible": false,
+      "features": {
+        "type": "FeatureCollection",
+        "features": []
+      },
+      "style": "background"
+    },
+    {
+      "name": "planning",
+      "title": "Planning",
+      "group": "planning",
+      "type": "GEOJSON",
+      "style": "planning",
+      "features": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -12,
+                    -8
+                  ],
+                  [
+                    0,
+                    -8
+                  ],
+                  [
+                    0,
+                    8
+                  ],
+                  [
+                    -12,
+                    8
+                  ],
+                  [
+                    -12,
+                    -8
+                  ]
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "nature",
+      "title": "Nature",
+      "group": "nature",
+      "type": "GEOJSON",
+      "style": "nature",
+      "features": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    1,
+                    -8
+                  ],
+                  [
+                    12,
+                    -8
+                  ],
+                  [
+                    12,
+                    8
+                  ],
+                  [
+                    1,
+                    8
+                  ],
+                  [
+                    1,
+                    -8
+                  ]
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "buildings",
+      "title": "Buildings",
+      "group": "planning",
+      "type": "GEOJSON",
+      "style": "buildings",
+      "features": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -6,
+                    -2
+                  ],
+                  [
+                    -3,
+                    -2
+                  ],
+                  [
+                    -3,
+                    2
+                  ],
+                  [
+                    -6,
+                    2
+                  ],
+                  [
+                    -6,
+                    -2
+                  ]
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "projectionExtent": [
+    -20037508,
+    -20037508,
+    20037508,
+    20037508
+  ],
+  "resolutions": [
+    156543.03392804097,
+    78271.51696402048,
+    39135.75848201024,
+    19567.87924100512,
+    9783.93962050256,
+    4891.96981025128,
+    2445.98490512564,
+    1222.99245256282,
+    611.49622628141,
+    305.748113140705,
+    152.8740565703525,
+    76.43702828517625,
+    38.21851414258813,
+    19.109257071294063,
+    9.554628535647032,
+    4.777314267823516,
+    2.388657133911758,
+    1.194328566955879,
+    0.5971642834779395
+  ]
+}

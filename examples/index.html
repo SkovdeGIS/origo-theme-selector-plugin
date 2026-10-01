@@ -1,0 +1,56 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Serve this repository at plugins/theme-selector/ in an existing Origo installation. -->
+  <base href="../../../">
+  <title>Origo Theme Selector example</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="plugins/theme-selector/theme-selector.css">
+</head>
+<body>
+  <div id="app-wrapper"></div>
+  <!-- Change to js/origo.min.js if that is your Origo distribution's filename. -->
+  <script src="js/origo.js"></script>
+  <script src="plugins/theme-selector/theme-selector.js"></script>
+  <script>
+    var themeSelector;
+    var origo = Origo('plugins/theme-selector/examples/map.json', {
+      baseUrl: new URL('../../../', location.href).href
+    });
+    origo.on('load', function (viewer) {
+      themeSelector = ThemeSelector({
+        exclusive: true,
+        themes: [
+          {
+            name: 'planning',
+            title: { 'sv-SE': 'Planering', 'en-US': 'Planning' },
+            icon: '#ic_map_24px',
+            groups: ['planning'],
+            exclude: ['buildings']
+          },
+          {
+            name: 'nature',
+            title: { 'sv-SE': 'Natur', 'en-US': 'Nature' },
+            icon: '#ic_layers_24px',
+            layers: ['nature'],
+            background: 'orthophoto',
+            center: [0, 0],
+            zoom: 3
+          },
+          {
+            name: 'buildings',
+            title: { 'sv-SE': 'Byggnader', 'en-US': 'Buildings' },
+            icon: '#ic_home_24px',
+            layers: ['buildings'],
+            combinable: true
+          }
+        ]
+      });
+      viewer.addComponent(themeSelector);
+    });
+  </script>
+</body>
+</html>
+
