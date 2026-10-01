@@ -5,19 +5,17 @@
 }
 
 .o-theme-selector-panel {
-  border-radius: .25rem;
   box-sizing: border-box;
   display: flex;
-  flex-direction: column;
-  gap: .25rem;
-  max-height: 60vh;
-  max-width: min(18rem, 60vw);
-  overflow: auto;
-  padding: .5rem;
-  position: absolute;
+  flex-flow: row wrap;
+  gap: .5rem;
+  max-width: calc(100vw - 1rem);
+  overflow: visible;
+  padding: 0;
+  position: fixed;
   top: 0;
   width: max-content;
-  z-index: 100;
+  z-index: 10000;
 }
 
 .o-theme-selector-panel[hidden] {
@@ -25,32 +23,27 @@
 }
 
 .o-theme-selector-item {
-  align-items: center;
-  display: flex;
-  gap: .5rem;
-  min-height: 2.75rem;
   position: relative;
-  text-align: left;
 }
 
-.o-theme-selector-item .icon {
-  flex: 0 0 1.25rem;
-  height: 1.25rem;
-  width: 1.25rem;
+.o-theme-selector .o-tooltip,
+.o-theme-selector-panel .o-tooltip {
+  overflow: visible;
 }
 
 .o-theme-selector-label {
-  overflow-wrap: anywhere;
+  clip: rect(0, 0, 0, 0);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }
 
-.o-theme-selector-toggle:focus-visible,
-.o-theme-selector-item:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: -2px;
+.o-theme-selector-panel .o-tooltip:hover span[data-tooltip] {
+  z-index: 10001;
 }
 
-.o-theme-selector-item[aria-pressed='true'] .o-theme-selector-label {
-  font-weight: bold;
-  text-decoration: underline;
+.o-theme-selector .o-tooltip:hover span[data-tooltip] {
+  z-index: 10001;
 }
-
