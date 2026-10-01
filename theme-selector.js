@@ -353,18 +353,23 @@
 
     function positionPanel() {
       if (!panel || panel.hidden) return;
+      const bounds = mainTarget.getBoundingClientRect();
       const anchor = mainElement.getBoundingClientRect();
       const viewportWidth = document.documentElement.clientWidth;
       const viewportHeight = document.documentElement.clientHeight;
       const gap = 8;
-      panel.style.maxWidth = Math.max(0, viewportWidth - gap * 2) + 'px';
+      const leftEdge = Math.max(gap, bounds.left + gap);
+      const rightEdge = Math.min(viewportWidth - gap, bounds.right - gap);
+      const topEdge = Math.max(gap, bounds.top + gap);
+      const bottomEdge = Math.min(viewportHeight - gap, bounds.bottom - gap);
+      panel.style.maxWidth = Math.max(0, rightEdge - leftEdge) + 'px';
       const size = panel.getBoundingClientRect();
-      const spaceRight = viewportWidth - anchor.right - gap;
-      const spaceLeft = anchor.left - gap;
+      const spaceRight = rightEdge - anchor.right - gap;
+      const spaceLeft = anchor.left - leftEdge - gap;
       const useLeft = size.width > spaceRight && spaceLeft > spaceRight;
       const left = useLeft ? anchor.left - size.width - gap : anchor.right + gap;
-      panel.style.left = Math.max(gap, Math.min(left, viewportWidth - size.width - gap)) + 'px';
-      panel.style.top = Math.max(gap, Math.min(anchor.top, viewportHeight - size.height - gap)) + 'px';
+      panel.style.left = Math.max(leftEdge, Math.min(left, rightEdge - size.width)) + 'px';
+      panel.style.top = Math.max(topEdge, Math.min(anchor.top, bottomEdge - size.height)) + 'px';
     }
 
     function setOpen(open, focus = false) {
@@ -424,9 +429,11 @@
       component.dispatch('render');
       refreshLocale();
       paint();
-      const resize = new ResizeObserver(positionPanel);
-      resize.observe(mainTarget);
-      disposers.push(() => resize.disconnect());
+      if (typeof global.ResizeObserver === 'function') {
+        const resize = new global.ResizeObserver(positionPanel);
+        resize.observe(mainTarget);
+        disposers.push(() => resize.disconnect());
+      }
       listen(mainTarget, 'scroll', positionPanel, true);
       listen(window, 'resize', positionPanel);
       listen(window, 'scroll', positionPanel, true);
