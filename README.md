@@ -114,9 +114,25 @@ all matches; pass a layer object to target one specific instance.
 
 ### Icons
 
-Icons reference SVG symbols loaded by Origo, for example `#ic_layers_24px`,
-`#ic_map_24px` or `#ic_home_24px`. Custom symbols must be added to a loaded
-sprite first.
+Set `icon` to the exact SVG symbol ID, including its leading `#`. For example,
+the Origo build used by this sample provides `#ic_layers_24px`, `#ic_map_24px`
+and `#ic_home_24px`:
+
+```js
+{
+  name: 'planning',
+  title: 'Planning',
+  icon: '#ic_map_24px',
+  groups: ['planning']
+}
+```
+
+If a theme omits `icon`, it uses the top-level icon; if both omit it, the
+plugin uses `#ic_layers_24px`. Symbol IDs vary between Origo builds, so use an
+ID present in the SVG sprite loaded by your map. The plugin checks the `#id`
+format but cannot check whether the sprite contains that ID; an unknown ID
+renders without an icon. Add custom symbols to a sprite loaded by Origo before
+using them here.
 
 ## Examples
 
