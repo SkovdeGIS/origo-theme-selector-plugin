@@ -5,15 +5,12 @@
 
 ## What does it do?
 
-Adds a toolbar button with map themes to Origo. Click a theme to enable its
-layers, select a background and optionally move the map. Click again to switch
-its layers off and restore the background. Written in vanilla JavaScript, with
-no build step.
+Adds a "Select view" button to Origo's navigation toolbar. Its panel holds map
+themes: click a theme to enable its layers, select a background and optionally
+move the map. Click again to switch its layers off and get the previous
+background back. Written in vanilla JavaScript, with no build step.
 
-![Three themes selected in sequence, the last one combined with the others](examples/theme-selector-toggle.gif)
-
-The recording comes from another map, with the themes Origokommuner, Mask and
-the combinable Båda. The example below uses Planering, Natur and Byggnader.
+![The Planning, Nature and Buildings themes selected in sequence](examples/theme-selector-toggle.gif)
 
 ## Installation
 
@@ -33,6 +30,7 @@ Add this inside your existing map's `load` handler in `index.html`:
 origo.on('load', function (viewer) {
   viewer.addComponent(ThemeSelector({
     exclusive: true,
+    icon: '#o_legend_24px',
     themes: [
       {
         name: 'planning',
@@ -57,58 +55,53 @@ origo.on('load', function (viewer) {
 ```
 
 Use your own group and layer names, and coordinates in the map's projection.
-A complete example is in [examples/index.html](examples/index.html). Serve it
-from `plugins/theme-selector/examples/` in an Origo installation. Its orthophoto
-is an empty placeholder; replace it with your own imagery layer.
+Themes can also live in your map's JSON configuration and be passed in from
+there. A complete example is in [examples/index.html](examples/index.html).
+Serve it from `plugins/theme-selector/examples/` in an Origo installation. Its
+orthophoto is an empty placeholder; replace it with your own imagery layer.
 
 ## Configuration
 
-| Option | Meaning |
-| --- | --- |
-| `themes` | Array of themes, as above. |
-| `exclusive` | Defaults to `true`: activating a normal theme deactivates other normal themes. Set `false` to allow all themes together. |
-| `title` | Main button title. A string or Swedish/English object; defaults to `Välj vy` / `Select view`. |
-| `icon` | Main button and fallback theme icon. Defaults to `#ic_map_24px` from Origo's `material-icons.svg`. |
-| `target` | Optional container ID; defaults to Origo's navigation toolbar. |
-| `placement` | `'first'` puts the button first in the target, for example above the zoom buttons. Defaults to last. |
-| `animationDuration` | Map movement in milliseconds. Defaults to `500`; `0` jumps directly. |
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `themes` | `[]` | Array of themes, see below. Nothing is rendered without themes. |
+| `exclusive` | `true` | Activating a normal theme deactivates other normal themes. Set `false` to allow all themes together. |
+| `title` | `Välj vy` / `Select view` | Main button title. String or `{ 'sv-SE': …, 'en-US': … }`. |
+| `icon` | `#o_legend_24px` | Main button icon, and the fallback for themes whose icon is missing. |
+| `iconPrefix` | `#` | Prefix for icons given without `#`. With `'#theme_'`, `icon: 'park'` means `#theme_park`. |
+| `target` | Origo's navigation | Container ID. |
+| `before` | `.o-zoom` | Selector of the element in the target to insert the button before. Set `false` to append it last. |
+| `includeSubgroups` | `false` | Set `true` to let `groups` also enable layers in nested groups. |
+| `iconTimeout` | `10000` | Milliseconds to wait for a sprite before a missing icon falls back. |
 
 | Theme option | Meaning |
 | --- | --- |
-| `name`, `title` | Name and button title. Title can be a string or Swedish/English object; defaults to the name. |
-| `icon` | SVG symbol ID, including `#`. |
-| `groups` | Enable layers in these Origo groups, including nested groups. A name or an array. |
-| `layers` | Explicit layer names to enable. A name or an array. |
+| `name` | Required and unique. Themes without a name or with a duplicate name are skipped with a console warning. |
+| `title` | Button title. String or Swedish/English object; defaults to the name. |
+| `icon` | SVG symbol ID from a sprite loaded by the map. Origo does not wait for its sprites before the map loads, so the selector waits up to `iconTimeout` for the symbol. An ID that is still missing gives a console warning and the main icon. |
+| `groups` | Enable layers in these Origo groups. Nested groups only with `includeSubgroups`. |
+| `layers` | Explicit layer names to enable. |
 | `exclude` | Exclude layer names from group selection. Explicit `layers` entries take precedence. |
-| `background` | Switch to this layer in the `background` group. |
-| `center`, `zoom` | Supply both, `[x, y]` and a number, to move the map when activated. |
+| `background` | Switch to this layer in the `background` group. When the last theme with a background is switched off, the previous background comes back. |
+| `center`, `zoom` | Supply both, as numbers, to move the map when activated. |
 | `combinable` | Defaults to `false`. Set `true` to keep this theme active alongside a normal theme. |
 
-Icons must exist as symbols in a sprite that Origo loads, either Origo's own
-or one of your own listed in `svgSprites` in the map configuration, for example
-`css/svg/custom.svg`. An unknown icon ID would give an empty button, so the
-selector warns in the console and uses the main icon instead.
+`groups`, `layers` and `exclude` accept an array or a single name.
 
-The configuration is checked when the selector is added. Themes without `name`
-are skipped. Unknown layers, groups, backgrounds and icons, duplicate theme
-names and invalid `center`/`zoom` give a console warning.
+## Behaviour
 
-The panel closes with Escape or a click outside it. Escape moves focus back to
-the main button only when focus was inside the selector. The panel opens to the
-left when it does not fit to the right inside the map. Active themes are marked
-visually, and a theme button is switched off when all its layers are switched
-off elsewhere. Buttons use Origo's tooltips.
-
-Titles use Origo's language when the selector is added. Other languages, and
-maps without the localization control, fall back to Swedish, then English,
-then the theme name.
+- A layer shared by two active themes stays on when one of them is switched off.
+- If the user switches off every layer of an active theme elsewhere, for example in the legend, its button is deactivated as well.
+- The panel closes with Escape or a click outside it. Escape only moves focus back to the main button if focus was inside the selector.
+- Buttons use Origo's own tooltip and `aria-pressed`; the panel is a labelled group controlled by the main button.
+- Titles use Origo's language when the selector is added. Origo reloads the page when the language changes.
 
 ## Limitations
 
-- Deactivation switches selected layers off unless another active theme uses them. Previous visibility is not restored, including when the component is removed.
-- The background is restored when the last theme with a background is deactivated, unless it has been changed elsewhere. Map position is not restored. Unrelated and excluded layers are left alone.
-- Switching layers on elsewhere does not activate a theme button. Layers and groups added later are not tracked.
+- Previous layer visibility is not restored. A layer that was on before a theme was activated is switched off with the theme, also when the component is removed.
+- The map position is not restored.
+- Layers and groups added after the selector are not tracked.
 - OpenLayers `GROUP` layers are treated as a whole; their children cannot be selected or excluded individually.
-- No filters, permalink handling or public activation API. Use one selector per map.
-- The panel position is checked when it opens and when the map is resized. Narrow embedded maps may need CSS adjustments.
-- Verified in a browser against Origo `2.11.0-dev`.
+- No source filters, permalink handling or public activation API. Use one selector per map.
+- The panel opens to the right of the button, so a toolbar on the right side of the map needs CSS adjustments.
+- Verified with Origo `2.11.0-dev`.

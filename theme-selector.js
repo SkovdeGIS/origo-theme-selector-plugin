@@ -2,19 +2,19 @@
 (function (global) {
   'use strict';
 
-  const DEFAULT_TITLE = { 'sv-SE': 'Välj vy', 'en-US': 'Select view' };
+  const SVG_NS = 'http://www.w3.org/2000/svg';
 
-  function warn(...args) {
-    console.warn('ThemeSelector:', ...args);
+  function toArray(value) {
+    if (Array.isArray(value)) return value;
+    return value === undefined || value === null ? [] : [value];
   }
 
-  // Accepts a single name or an array of names.
-  function toNames(value, field, themeName) {
-    if (value === undefined || value === null) return [];
-    const list = Array.isArray(value) ? value : [value];
-    const names = list.filter(item => typeof item === 'string');
-    if (names.length !== list.length) warn(`theme "${themeName}": ${field} must contain names only`);
-    return names;
+  function localized(value, locale, fallback) {
+    if (typeof value === 'string') return value;
+    if (value && typeof value === 'object') {
+      return value[locale] || value['sv-SE'] || value['en-US'] || fallback;
+    }
+    return fallback;
   }
 
   function ThemeSelector(options = {}) {
@@ -22,287 +22,242 @@
     let root;
     let panel;
     let mainButton;
-    let locale;
     let themes = [];
     let backgrounds = [];
-    let watchedLayers = [];
-    // Backgrounds visible before the first theme background was applied.
-    let baselineBackgrounds = null;
-    let themeBackground = null;
-    let updating = false;
+    let baseline = null;
+    let busy = false;
+    let checkQueued = false;
+    let layerListeners = [];
 
-    function localize(value, fallback) {
-      if (typeof value === 'string') return value;
-      if (value && typeof value === 'object') {
-        return value[locale] || value['sv-SE'] || value['en-US'] || fallback;
-      }
-      return fallback;
+    let pendingIcons = [];
+    let iconObserver = null;
+    let iconTimer = null;
+
+    function iconHref(icon) {
+      return icon.startsWith('#') ? icon : (options.iconPrefix || '#') + icon;
     }
 
-    function iconExists(icon) {
-      return typeof icon === 'string' && icon.charAt(0) === '#' && !!document.getElementById(icon.slice(1));
+    function setIcon(button, href, fallback) {
+      const use = button.querySelector('use');
+      use.setAttribute('href', href);
+      if (!document.getElementById(href.slice(1))) pendingIcons.push({ use, href, fallback });
     }
 
-    function createButton(title, icon, placement) {
+    function stopWaitingForIcons() {
+      if (iconObserver) iconObserver.disconnect();
+      clearTimeout(iconTimer);
+      iconObserver = null;
+      iconTimer = null;
+      pendingIcons = [];
+    }
+
+    function waitForIcons() {
+      const resolve = () => {
+        pendingIcons = pendingIcons.filter(item => !document.getElementById(item.href.slice(1)));
+        if (!pendingIcons.length) stopWaitingForIcons();
+      };
+      resolve();
+      if (!pendingIcons.length) return;
+      iconObserver = new MutationObserver(resolve);
+      iconObserver.observe(document.body, { childList: true });
+      iconTimer = setTimeout(() => {
+        const missing = new Set(pendingIcons.map(item => item.href));
+        pendingIcons.forEach(item => {
+          console.warn('ThemeSelector: icon not found in any loaded sprite:', item.href);
+          const fallback = missing.has(item.fallback) ? '#o_legend_24px' : item.fallback;
+          item.use.setAttribute('href', fallback);
+        });
+        stopWaitingForIcons();
+      }, options.iconTimeout || 10000);
+    }
+
+    function createButton(title, placement) {
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = 'padding-small icon-smaller light round box-shadow o-tooltip';
+      button.className = 'o-tooltip';
       button.setAttribute('aria-label', title);
-
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      svg.setAttribute('class', 'o-icon-24');
+      const svg = document.createElementNS(SVG_NS, 'svg');
       svg.setAttribute('aria-hidden', 'true');
-      const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-      use.setAttribute('href', icon);
-      svg.appendChild(use);
-      button.appendChild(svg);
-
-      // Origo's tooltip bubble, as on the other toolbar buttons.
+      svg.appendChild(document.createElementNS(SVG_NS, 'use'));
       const tooltip = document.createElement('span');
       tooltip.setAttribute('data-tooltip', title);
       tooltip.setAttribute('data-placement', placement);
-      button.appendChild(tooltip);
+      button.append(svg, tooltip);
       return button;
-    }
-
-    // Opens to the left when the panel does not fit inside the map.
-    function positionPanel() {
-      if (!panel || panel.hidden) return;
-      panel.classList.remove('o-theme-selector-panel-left');
-      const mapElement = viewer.getMap().getTargetElement();
-      const right = mapElement ? mapElement.getBoundingClientRect().right : window.innerWidth;
-      if (panel.getBoundingClientRect().right > right) {
-        panel.classList.add('o-theme-selector-panel-left');
-      }
     }
 
     function setOpen(open) {
       panel.hidden = !open;
       mainButton.setAttribute('aria-expanded', String(open));
-      positionPanel();
     }
 
     function onKeydown(event) {
       if (event.key !== 'Escape' || panel.hidden) return;
-      const hadFocus = root.contains(document.activeElement);
+      const focusInside = root.contains(document.activeElement);
       setOpen(false);
-      if (hadFocus) mainButton.focus();
+      if (focusInside) mainButton.focus();
     }
 
-    function onPointerdown(event) {
+    function onDocumentClick(event) {
       if (!panel.hidden && !root.contains(event.target)) setOpen(false);
     }
 
-    function updateMainButton() {
-      mainButton.classList.toggle('active', themes.some(item => item.active));
+    function visibleBackground() {
+      const layer = backgrounds.find(item => item.getVisible());
+      return layer ? layer.get('name') : null;
     }
 
-    function markActive(theme, active) {
-      theme.active = active;
-      theme.button.classList.toggle('active', active);
-      theme.button.setAttribute('aria-pressed', String(active));
+    function showBackground(name) {
+      const target = backgrounds.find(layer => layer.get('name') === name);
+      if (target) backgrounds.forEach(layer => layer.setVisible(layer === target));
     }
 
     function setActive(theme, active) {
-      updating = true;
-      // No snapshots: keep layers used by another active theme visible.
       theme.layers.forEach(layer => {
         if (active || !themes.some(other => other !== theme && other.active && other.layers.includes(layer))) {
           layer.setVisible(active);
         }
       });
-      updating = false;
-      markActive(theme, active);
+      theme.active = active;
+      theme.button.classList.toggle('active', active);
+      theme.button.setAttribute('aria-pressed', String(active));
+      mainButton.classList.toggle('active', themes.some(item => item.active));
     }
 
-    function showBackground(layer) {
-      backgrounds.forEach(item => item.setVisible(item === layer));
+    function moveView(config) {
+      const center = config.center;
+      if (!Array.isArray(center) || center.length !== 2 || !center.every(Number.isFinite) || !Number.isFinite(config.zoom)) return;
+      viewer.getMap().getView().animate({ center, zoom: config.zoom, duration: 600 });
     }
 
-    // Restores the original background when no active theme sets one,
-    // unless the background has been changed elsewhere in the meantime.
-    function restoreBackground() {
-      if (!baselineBackgrounds || themes.some(theme => theme.active && theme.background)) return;
-      if (themeBackground && themeBackground.getVisible()) {
-        backgrounds.forEach(layer => layer.setVisible(baselineBackgrounds.includes(layer)));
-      }
-      baselineBackgrounds = null;
-      themeBackground = null;
-    }
+    function toggleTheme(theme, automatic) {
+      busy = true;
+      const before = themes.map(item => item.active);
+      const backgroundBefore = visibleBackground();
 
-    // Switches a theme button off when its layers are all switched off elsewhere.
-    function onLayerVisibility() {
-      if (updating) return;
-      themes.forEach(theme => {
-        if (theme.active && theme.layers.length && !theme.layers.some(layer => layer.getVisible())) {
-          markActive(theme, false);
-        }
-      });
-      restoreBackground();
-      updateMainButton();
-    }
-
-    function moveView(center, zoom) {
-      const view = viewer.getMap().getView();
-      const duration = options.animationDuration === undefined ? 500 : options.animationDuration;
-      if (duration > 0) {
-        view.animate({ center, zoom, duration });
-      } else {
-        view.setCenter(center);
-        view.setZoom(zoom);
-      }
-    }
-
-    function toggleTheme(theme) {
       if (theme.active) {
         setActive(theme, false);
-        restoreBackground();
-        updateMainButton();
-        return;
-      }
-
-      if (options.exclusive !== false && !theme.combinable) {
-        themes.forEach(other => {
-          if (other.active && !other.combinable) setActive(other, false);
-        });
-      }
-      setActive(theme, true);
-
-      if (theme.background) {
-        if (!baselineBackgrounds) baselineBackgrounds = backgrounds.filter(layer => layer.getVisible());
-        showBackground(theme.background);
-        themeBackground = theme.background;
       } else {
-        restoreBackground();
-      }
-      updateMainButton();
-
-      if (theme.center) moveView(theme.center, theme.zoom);
-    }
-
-    function createTheme(config, layers, groups, mainIcon, seenNames) {
-      if (!config || typeof config !== 'object' || typeof config.name !== 'string' || !config.name) {
-        warn('skipping theme without name', config);
-        return null;
-      }
-      const name = config.name;
-      if (seenNames.has(name)) warn(`duplicate theme name "${name}"`);
-      seenNames.add(name);
-
-      const layerNames = toNames(config.layers, 'layers', name);
-      const excludeNames = toNames(config.exclude, 'exclude', name);
-      const groupList = toNames(config.groups, 'groups', name);
-      const knownLayers = new Set(layers.filter(layer => layer.get('group') !== 'background').map(layer => layer.get('name')));
-      const knownGroups = new Set(groups.map(group => group.name));
-      layerNames.concat(excludeNames).forEach(layerName => {
-        if (!knownLayers.has(layerName)) warn(`theme "${name}": unknown layer "${layerName}"`);
-      });
-      groupList.forEach(groupName => {
-        if (!knownGroups.has(groupName)) warn(`theme "${name}": unknown group "${groupName}"`);
-      });
-
-      // Origo exposes nested groups as a flat list with parent names.
-      const groupNames = new Set(groupList);
-      for (const groupName of groupNames) {
-        groups.forEach(group => {
-          if (group.parent === groupName) groupNames.add(group.name);
-        });
+        if (options.exclusive !== false && !theme.config.combinable) {
+          themes.forEach(other => {
+            if (other.active && !other.config.combinable) setActive(other, false);
+          });
+        }
+        setActive(theme, true);
+        if (theme.config.background) showBackground(theme.config.background);
+        moveView(theme.config);
       }
 
-      const selectedLayers = layers.filter(layer => {
-        const layerName = layer.get('name');
-        if (layer.get('group') === 'background') return false;
-        return layerNames.includes(layerName)
-          || (groupNames.has(layer.get('group')) && !excludeNames.includes(layerName));
-      });
-
-      let background = null;
-      if (config.background !== undefined) {
-        background = backgrounds.find(layer => layer.get('name') === config.background) || null;
-        if (!background) warn(`theme "${name}": unknown background "${config.background}"`);
-      }
-
-      let center = null;
-      let zoom = null;
-      if (config.center !== undefined || config.zoom !== undefined) {
-        const validCenter = Array.isArray(config.center) && config.center.length === 2
-          && config.center.every(Number.isFinite);
-        if (validCenter && Number.isFinite(config.zoom)) {
-          center = config.center;
-          zoom = config.zoom;
-        } else {
-          warn(`theme "${name}": center must be [x, y] and zoom a number; the map will not move`);
+      if (!automatic) {
+        const startedWithBackground = theme.active && theme.config.background;
+        const endedWithBackground = themes.some((item, i) => before[i] && !item.active && item.config.background);
+        if (startedWithBackground && !themes.some((item, i) => before[i] && item.config.background)) {
+          baseline = backgroundBefore;
+        }
+        if (endedWithBackground && !startedWithBackground) {
+          const remaining = themes.find(item => item.active && item.config.background);
+          if (remaining) {
+            showBackground(remaining.config.background);
+          } else if (baseline) {
+            showBackground(baseline);
+            baseline = null;
+          }
         }
       }
+      busy = false;
+    }
 
-      let icon = config.icon || mainIcon;
-      if (config.icon && !iconExists(config.icon)) {
-        warn(`theme "${name}": icon "${config.icon}" not found in loaded sprites`);
-        icon = mainIcon;
+    function checkActiveThemes() {
+      checkQueued = false;
+      if (!root) return;
+      themes.forEach(theme => {
+        if (theme.active && theme.layers.length && !theme.layers.some(layer => layer.getVisible())) {
+          toggleTheme(theme, true);
+        }
+      });
+    }
+
+    function onLayerVisibility() {
+      if (busy || checkQueued) return;
+      checkQueued = true;
+      queueMicrotask(checkActiveThemes);
+    }
+
+    function selectLayers(config, layers, groups) {
+      const groupNames = new Set(toArray(config.groups));
+      if (options.includeSubgroups) {
+        for (const name of groupNames) {
+          groups.forEach(group => {
+            if (group.parent === name) groupNames.add(group.name);
+          });
+        }
       }
-
-      const label = localize(config.title, name);
-      const button = createButton(label, icon, 'south');
-      const theme = {
-        name,
-        layers: selectedLayers,
-        background,
-        center,
-        zoom,
-        combinable: config.combinable === true,
-        button,
-        active: false
-      };
-      button.setAttribute('aria-pressed', 'false');
-      button.addEventListener('click', () => toggleTheme(theme));
-      return theme;
+      const names = toArray(config.layers);
+      const exclude = toArray(config.exclude);
+      return layers.filter(layer => {
+        const name = layer.get('name');
+        if (layer.get('group') === 'background') return false;
+        return names.includes(name) || (groupNames.has(layer.get('group')) && !exclude.includes(name));
+      });
     }
 
     return global.Origo.ui.Component({
       name: 'themeSelector',
       onInit() {
-        // Use Origo's existing component lifecycle for removal.
         this.on('clear', () => {
           if (!root) return;
           themes.forEach(theme => {
             if (theme.active) setActive(theme, false);
           });
-          restoreBackground();
-          watchedLayers.forEach(layer => layer.un('change:visible', onLayerVisibility));
-          viewer.getMap().un('change:size', positionPanel);
+          stopWaitingForIcons();
+          layerListeners.forEach(layer => layer.un('change:visible', onLayerVisibility));
           document.removeEventListener('keydown', onKeydown);
-          document.removeEventListener('pointerdown', onPointerdown, true);
+          document.removeEventListener('click', onDocumentClick);
           root.remove();
           root = null;
           viewer = null;
           themes = [];
           backgrounds = [];
-          watchedLayers = [];
+          layerListeners = [];
+          baseline = null;
         });
       },
       onAdd(event) {
         viewer = event.target;
+        const configs = toArray(options.themes).filter((config, i, all) => {
+          if (!config || !config.name) {
+            console.warn('ThemeSelector: theme without name ignored:', config);
+            return false;
+          }
+          if (all.findIndex(other => other && other.name === config.name) !== i) {
+            console.warn('ThemeSelector: duplicate theme name ignored:', config.name);
+            return false;
+          }
+          return true;
+        });
+        if (!configs.length) return;
+
         const targetId = options.target || viewer.getMain().getNavigation().getId();
         const target = document.getElementById(targetId);
         if (!target) {
-          warn('target not found:', targetId);
+          console.warn('ThemeSelector: target not found:', targetId);
           return;
         }
+
         const layers = viewer.getLayers();
         const groups = viewer.getGroups();
         backgrounds = layers.filter(layer => layer.get('group') === 'background');
 
         const localization = viewer.getControlByName('localization');
-        locale = localization ? localization.getCurrentLocaleId() : 'sv-SE';
-        const title = localize(options.title, localize(DEFAULT_TITLE));
-
-        const mainIcon = options.icon || '#ic_map_24px';
-        if (!iconExists(mainIcon)) warn(`icon "${mainIcon}" not found in loaded sprites`);
+        const locale = localization ? localization.getCurrentLocaleId() : 'sv-SE';
+        const title = localized(options.title, locale, locale === 'en-US' ? 'Select view' : 'Välj vy');
+        const mainIcon = options.icon ? iconHref(options.icon) : '#o_legend_24px';
 
         root = document.createElement('div');
-        root.className = 'o-theme-selector o-toolbar';
+        root.className = 'o-theme-selector';
         root.id = this.getId();
-        mainButton = createButton(title, mainIcon, 'east');
+        mainButton = createButton(title, 'east');
+        setIcon(mainButton, mainIcon, '#o_legend_24px');
         panel = document.createElement('div');
         panel.className = 'o-theme-selector-panel';
         panel.id = root.id + '-panel';
@@ -310,35 +265,34 @@
         panel.setAttribute('aria-label', title);
         mainButton.setAttribute('aria-controls', panel.id);
         mainButton.addEventListener('click', () => setOpen(panel.hidden));
-        root.appendChild(mainButton);
-        root.appendChild(panel);
+        setOpen(false);
+        root.append(mainButton, panel);
 
-        let configs = options.themes || [];
-        if (!Array.isArray(configs)) {
-          warn('themes must be an array');
-          configs = [];
-        }
-        const seenNames = new Set();
         configs.forEach(config => {
-          const theme = createTheme(config, layers, groups, mainIcon, seenNames);
-          if (!theme) return;
+          const label = localized(config.title, locale, config.name);
+          const button = createButton(label, 'south');
+          setIcon(button, config.icon ? iconHref(config.icon) : mainIcon, mainIcon);
+          const theme = { config, layers: selectLayers(config, layers, groups), button, active: false };
+          button.setAttribute('aria-pressed', 'false');
+          button.addEventListener('click', () => toggleTheme(theme, false));
           themes.push(theme);
-          panel.appendChild(theme.button);
+          panel.appendChild(button);
         });
 
-        watchedLayers = [...new Set(themes.flatMap(theme => theme.layers))];
-        watchedLayers.forEach(layer => layer.on('change:visible', onLayerVisibility));
-        // OpenLayers updates the map size on window and container resizes.
-        viewer.getMap().on('change:size', positionPanel);
+        new Set(themes.flatMap(theme => theme.layers)).forEach(layer => {
+          layer.on('change:visible', onLayerVisibility);
+          layerListeners.push(layer);
+        });
 
-        if (options.placement === 'first') {
-          target.insertBefore(root, target.firstChild);
+        const before = options.before === false ? null : target.querySelector(options.before || '.o-zoom');
+        if (before && before.parentElement === target) {
+          target.insertBefore(root, before);
         } else {
           target.appendChild(root);
         }
-        setOpen(false);
         document.addEventListener('keydown', onKeydown);
-        document.addEventListener('pointerdown', onPointerdown, true);
+        document.addEventListener('click', onDocumentClick);
+        waitForIcons();
       }
     });
   }

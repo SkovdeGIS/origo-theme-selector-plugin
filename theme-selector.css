@@ -1,27 +1,57 @@
-/* Button colors, surfaces and tooltips come from Origo. */
+/* Button sizes and colors match Origo's own map tool buttons. */
 .o-theme-selector {
   position: relative;
-  width: max-content;
+  display: flex;
+  justify-content: center;
+  margin: 0 0 0.5rem 0;
 }
 
-/* No padding or overflow, so theme buttons line up with the main button
-   and Origo's tooltips are not clipped. */
+.o-theme-selector button {
+  width: 2.125rem;
+  height: 2.125rem;
+  border-radius: 50%;
+  background: #ffffff;
+  border: none;
+  padding: 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  display: block;
+  position: relative;
+  overflow: visible;
+  line-height: 0;
+}
+
+.o-theme-selector button:hover {
+  background: hsl(0, 0%, 92%);
+}
+
+.o-theme-selector button:focus-visible {
+  outline: 2px solid hsl(205, 100%, 48%);
+  outline-offset: 2px;
+}
+
+.o-theme-selector button svg {
+  width: 18px;
+  height: 18px;
+  fill: hsl(0, 0%, 29%);
+}
+
+.o-theme-selector button span[data-tooltip] {
+  z-index: 200;
+}
+
+.o-theme-selector > button.active svg {
+  fill: hsl(205, 100%, 48%);
+}
+
 .o-theme-selector-panel {
   position: absolute;
+  left: calc(100% + 0.5rem);
   top: 0;
-  left: calc(100% + .5rem);
-  z-index: 10;
   display: flex;
-  flex-wrap: wrap;
-  gap: .5rem;
-  width: max-content;
-  max-width: calc(100vw - 5rem);
-}
-
-.o-theme-selector-panel.o-theme-selector-panel-left {
-  left: auto;
-  right: calc(100% + .5rem);
-  justify-content: flex-end;
+  flex-direction: row;
+  gap: 0.5rem;
+  z-index: 100;
 }
 
 .o-theme-selector-panel[hidden] {
@@ -32,12 +62,14 @@
   flex: none;
 }
 
-.o-theme-selector button[aria-pressed='true'] {
-  outline: 2px solid currentColor;
-  outline-offset: -3px;
+.o-theme-selector-panel button.active {
+  background: hsl(205, 100%, 48%);
 }
 
-.o-theme-selector button:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 2px;
+.o-theme-selector-panel button.active:hover {
+  background: hsl(205, 100%, 43%);
+}
+
+.o-theme-selector-panel button.active svg {
+  fill: #ffffff;
 }
