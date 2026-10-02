@@ -82,7 +82,7 @@ Origo's language when the selector is added, or Swedish without localization.
 
 ## Limitations
 
-- Deactivation switches selected layers off, including layers already visible before activation. Shared layers can be switched off while another theme remains active.
+- Deactivation switches selected layers off unless another active theme uses them. Previous visibility is not restored, including when the component is removed.
 - Background and map position are not restored. Unrelated and excluded layers are left alone.
 - Manual changes elsewhere do not update active buttons. Layers and groups added later are not tracked.
 - OpenLayers `GROUP` layers are treated as a whole; their children cannot be selected or excluded individually.

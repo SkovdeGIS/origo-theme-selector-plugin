@@ -40,8 +40,12 @@
     }
 
     function setActive(theme, active) {
-      // No snapshots: deactivation simply switches these layers off.
-      theme.layers.forEach(layer => layer.setVisible(active));
+      // No snapshots: keep layers used by another active theme visible.
+      theme.layers.forEach(layer => {
+        if (active || !themes.some(other => other !== theme && other.active && other.layers.includes(layer))) {
+          layer.setVisible(active);
+        }
+      });
       theme.active = active;
       theme.button.classList.toggle('active', active);
       theme.button.setAttribute('aria-pressed', String(active));
@@ -94,6 +98,10 @@
         viewer = event.target;
         const targetId = options.target || viewer.getMain().getNavigation().getId();
         const target = document.getElementById(targetId);
+        if (!target) {
+          console.warn('ThemeSelector: target not found:', targetId);
+          return;
+        }
         const layers = viewer.getLayers();
         const groups = viewer.getGroups();
         backgrounds = layers.filter(layer => layer.get('group') === 'background');
