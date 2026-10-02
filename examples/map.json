@@ -128,6 +128,7 @@
       "title": "Planning",
       "group": "planning",
       "type": "GEOJSON",
+      "visible": false,
       "style": "planning",
       "features": {
         "type": "FeatureCollection",
@@ -171,6 +172,7 @@
       "title": "Nature",
       "group": "nature",
       "type": "GEOJSON",
+      "visible": false,
       "style": "nature",
       "features": {
         "type": "FeatureCollection",
@@ -214,6 +216,7 @@
       "title": "Buildings",
       "group": "planning",
       "type": "GEOJSON",
+      "visible": false,
       "style": "buildings",
       "features": {
         "type": "FeatureCollection",

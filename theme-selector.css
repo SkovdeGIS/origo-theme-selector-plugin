@@ -1,49 +1,38 @@
-/* Layout only; colors, icons and button surfaces come from Origo. */
+/* Button colors and surfaces come from Origo. */
 .o-theme-selector {
   position: relative;
   width: max-content;
 }
 
 .o-theme-selector-panel {
-  box-sizing: border-box;
-  display: flex;
-  flex-flow: row wrap;
-  gap: .5rem;
-  max-width: calc(100vw - 1rem);
-  overflow: visible;
-  padding: 0;
-  position: fixed;
+  position: absolute;
   top: 0;
+  left: calc(100% + .5rem);
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
   width: max-content;
-  z-index: 10000;
+  max-width: calc(100vw - 5rem);
+  max-height: 60vh;
+  overflow: auto;
+  padding: .25rem;
 }
 
 .o-theme-selector-panel[hidden] {
   display: none;
 }
 
-.o-theme-selector-item {
-  position: relative;
+.o-theme-selector-panel button {
+  flex: none;
 }
 
-.o-theme-selector .o-tooltip,
-.o-theme-selector-panel .o-tooltip {
-  overflow: visible;
+.o-theme-selector button[aria-pressed='true'] {
+  outline: 2px solid currentColor;
+  outline-offset: -3px;
 }
 
-.o-theme-selector-label {
-  clip: rect(0, 0, 0, 0);
-  height: 1px;
-  overflow: hidden;
-  position: absolute;
-  white-space: nowrap;
-  width: 1px;
-}
-
-.o-theme-selector-panel .o-tooltip:hover span[data-tooltip] {
-  z-index: 10001;
-}
-
-.o-theme-selector .o-tooltip:hover span[data-tooltip] {
-  z-index: 10001;
+.o-theme-selector button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
 }

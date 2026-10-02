@@ -1,247 +1,88 @@
 # Origo Theme Selector
 
-[![License](https://img.shields.io/github/license/SkovdeGIS/origo-theme-selector-plugin?style=flat-square)](LICENSE)
-[![Tested with Origo 2.11.0-dev](https://img.shields.io/badge/tested-Origo%202.11.0--dev-2E8B57?style=flat-square)](#requirements)
-[![No build step](https://img.shields.io/badge/build-no%20build%20step-brightgreen?style=flat-square)](#installation)
-[![Latest commit](https://img.shields.io/github/last-commit/SkovdeGIS/origo-theme-selector-plugin?style=flat-square)](https://github.com/SkovdeGIS/origo-theme-selector-plugin/commits/main)
+## What does it do?
 
-A theme selector for Origo maps. Each theme can enable groups or individual
-layers, select a background, set source filters and move the map.
-Load the JavaScript and CSS directly; there is no install or build step.
+Adds a toolbar button with map themes to Origo. Click a theme to enable its
+layers, select a background and optionally move the map. Click again to switch
+its layers off. Written in vanilla JavaScript, with no build step.
 
-![Origokommuner, Mask, and the combined Båda preset selected in sequence](examples/theme-selector-toggle.gif)
-
-## Requirements
-
-Developed against Origo `2.11.0-dev`, commit
-[`728cbc6`](https://github.com/origo-map/origo/tree/728cbc6b3ce6e68debb73d0cfc3d3d03fd1394af),
-and tested with the browser distribution in that checkout.
-Older releases have not been verified.
-
-Use a current browser supported by Origo. `ResizeObserver` keeps the panel
-positioned when an embedded map changes size; without it, the plugin still
-works and repositions on window resize and scroll.
+BSD-2-Clause license; see [LICENSE](LICENSE).
 
 ## Installation
 
-Copy `theme-selector.js` and `theme-selector.css` to
-`plugins/theme-selector/` in your Origo installation. Load the CSS after
-Origo's stylesheet and the script after Origo.
-
-These are the only two files needed to run the plugin. The `examples/` folder
-contains an optional sample map for demonstration and manual testing.
-
-Add the stylesheet, plugin script and `ThemeSelector` setup to your existing
-`index.html`, following the example below. Keep your existing `Origo('index.json')`
-call and add the component inside its `load` handler; do not create a second map.
-The group and layer names in the theme configuration must match those defined
-in `index.json`.
+Copy `theme-selector.js` and `theme-selector.css` to `plugins/theme-selector/`
+in your Origo installation. Load them after Origo's own CSS and JavaScript:
 
 ```html
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Map</title>
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="plugins/theme-selector/theme-selector.css">
-</head>
-<body>
-  <div id="app-wrapper"></div>
-  <script src="js/origo.js"></script>
-  <script src="plugins/theme-selector/theme-selector.js"></script>
-  <script>
-    var themeSelector;
-    var origo = Origo('index.json');
-    origo.on('load', function (viewer) {
-      themeSelector = ThemeSelector({
-        exclusive: true,
-        themes: [
-          {
-            name: 'planning',
-            title: { 'sv-SE': 'Planering', 'en-US': 'Planning' },
-            icon: '#ic_place_24px',
-            groups: ['planning'],
-            exclude: ['buildings']
-          },
-          {
-            name: 'nature',
-            title: { 'sv-SE': 'Natur', 'en-US': 'Nature' },
-            icon: '#o_polygon_24px',
-            layers: ['nature'],
-            background: 'orthophoto'
-          },
-          {
-            name: 'buildings',
-            title: { 'sv-SE': 'Byggnader', 'en-US': 'Buildings' },
-            icon: '#baseline-select-all-24px',
-            layers: ['buildings'],
-            combinable: true
-          }
-        ]
-      });
-      viewer.addComponent(themeSelector);
-    });
-  </script>
-</body>
-</html>
+<link rel="stylesheet" href="plugins/theme-selector/theme-selector.css">
+<script src="plugins/theme-selector/theme-selector.js"></script>
 ```
 
-Use `js/origo.min.js` instead if that is the filename in your Origo distribution.
+## Example
 
-For a working sample, also copy `examples/` to `plugins/theme-selector/` and
-open `plugins/theme-selector/examples/index.html` through your existing HTTP
-server. The example uses local synthetic GeoJSON. Its `orthophoto` is an empty
-placeholder; replace it with your own background layer for imagery.
+Add this inside your existing map's `load` handler in `index.html`:
+
+```js
+origo.on('load', function (viewer) {
+  viewer.addComponent(ThemeSelector({
+    exclusive: true,
+    themes: [
+      {
+        name: 'planning',
+        title: { 'sv-SE': 'Planering', 'en-US': 'Planning' },
+        icon: '#ic_place_24px',
+        groups: ['planning'],
+        layers: ['some_layer'],
+        exclude: ['buildings'],
+        background: 'orthophoto',
+        center: [435000, 6485000],
+        zoom: 12
+      },
+      {
+        name: 'buildings',
+        title: 'Byggnader',
+        layers: ['buildings'],
+        combinable: true
+      }
+    ]
+  }));
+});
+```
+
+Use your own group and layer names, and coordinates in the map's projection.
+A complete example is in [examples/index.html](examples/index.html). Serve it
+from `plugins/theme-selector/examples/` in an Origo installation. Its orthophoto
+is an empty placeholder; replace it with your own imagery layer.
 
 ## Configuration
 
-| Option | Required | Default | Meaning |
-| --- | --- | --- | --- |
-| `themes` | Yes | None | Array of theme definitions. |
-| `exclusive` | No | `true` | Activating a non-combinable theme replaces other non-combinable themes. |
-| `target` | No | Origo navigation | Existing element ID, without `#`. Keep it inside the map. |
-| `icon` | No | `#o_legend_24px` | Main button icon and default theme icon. |
-| `localization` | No | Origo localization control | Localization control used for button labels and theme titles. |
+| Option | Meaning |
+| --- | --- |
+| `themes` | Array of themes, as above. |
+| `exclusive` | Defaults to `true`: activating a normal theme deactivates other normal themes. Set `false` to allow all themes together. |
+| `icon` | Main button and fallback theme icon. Defaults to `#o_legend_24px`. |
+| `target` | Optional container ID; defaults to Origo's navigation toolbar. |
 
-| Theme option | Required | Default | Meaning |
-| --- | --- | --- | --- |
-| `name` | Yes | None | Unique non-empty name used by the API. |
-| `title` | No | `name` | Plain string or locale-to-string object. |
-| `icon` | No | Top-level `icon` | SVG symbol reference, such as `#ic_map_24px`. |
-| `groups` | No | `[]` | Origo group names, including their descendant groups. |
-| `layers` | No | `[]` | Explicit layer names or actual OpenLayers layer objects. |
-| `exclude` | No | `[]` | Names or objects excluded from group selection. An explicit `layers` entry takes precedence. |
-| `background` | No | Unchanged | A name or object identifying exactly one layer in the `background` group. |
-| `filters` | No | Unchanged | Layer-name-to-filter-string object, or `[{ layer, value }]`. |
-| `center`, `zoom` | Together, if used | Unchanged | Two finite coordinates in the map projection, and a finite zoom level. |
-| `combinable` | No | `false` | This theme can coexist with exclusive themes. |
+| Theme option | Meaning |
+| --- | --- |
+| `name`, `title` | Name and button title. Title can be a string or Swedish/English object; defaults to the name. |
+| `icon` | SVG symbol ID from your Origo map, including `#`. |
+| `groups` | Enable layers in these Origo groups, including nested groups. |
+| `layers` | Explicit layer names to enable. |
+| `exclude` | Exclude layer names from group selection. Explicit `layers` entries take precedence. |
+| `background` | Switch to this layer in the `background` group. |
+| `center`, `zoom` | Supply both to move the map when activated. |
+| `combinable` | Defaults to `false`. Set `true` to keep this theme active alongside a normal theme. |
 
-Groups include descendant groups. `exclude` applies to group selection, while
-explicit `layers` entries take precedence. Names matching multiple layers select
-all matches; pass a layer object to target one specific instance.
+The panel closes with Escape. Active themes are marked visually. Titles use
+Origo's language when the selector is added, or Swedish without localization.
 
-### Icons
+## Limitations
 
-Set `icon` to the exact SVG symbol ID, including its leading `#`. For example,
-the Origo build used by this sample provides `#o_legend_24px`, `#ic_place_24px`,
-`#o_polygon_24px` and `#baseline-select-all-24px`:
-
-```js
-{
-  name: 'planning',
-  title: 'Planning',
-  icon: '#ic_place_24px',
-  groups: ['planning']
-}
-```
-
-If a theme omits `icon`, it uses the top-level icon; if both omit it, the
-plugin uses `#o_legend_24px`. Symbol IDs vary between Origo builds, so use an
-ID present in the SVG sprite loaded by your map. The plugin checks the `#id`
-format but cannot check whether the sprite contains that ID; an unknown ID
-renders without an icon. Add custom symbols to a sprite loaded by Origo before
-using them here.
-
-## Examples
-
-Select a whole group, including its child groups:
-
-```js
-{ name: 'planning', groups: ['planning'] }
-```
-
-Select a group but leave one layer out. Explicit `layers` entries take
-precedence over `exclude`:
-
-```js
-{
-  name: 'environment',
-  groups: ['environment'],
-  exclude: ['protected_areas']
-}
-```
-
-Select a background and open the map at a useful position. Coordinates use the
-map's projection:
-
-```js
-{
-  name: 'aerial',
-  background: 'orthophoto',
-  center: [435000, 6485000],
-  zoom: 12
-}
-```
-
-Filter a supported source, such as an Origo WFS layer. The expression follows
-that source's filter type (for example CQL or QGIS); the plugin does not add
-filter support to WMS or ordinary GeoJSON sources:
-
-```js
-{
-  name: 'open-water',
-  layers: ['water_areas'],
-  filters: { water_areas: "status = 'open'" }
-}
-```
-
-Keep a theme active alongside exclusive themes:
-
-```js
-{ name: 'emergency-sites', layers: ['shelters'], combinable: true }
-```
-
-## Localization
-
-Swedish and English button labels are registered with Origo's localization
-control. Theme titles can be strings or locale maps; missing titles fall back
-to English, Swedish, then the theme name.
-
-```js
-var localization = viewer.getControlByName('localization');
-localization.addPluginToLocale('en-US', { themeSelector: { buttonTitle: 'Map themes' } });
-themeSelector.refreshLocale();
-```
-
-Add other locales to the title objects and Origo localization control. Origo's
-language menu reloads the page; after changing locale programmatically, call
-`refreshLocale()`.
-
-## API
-
-Call these methods after `viewer.addComponent(themeSelector)`:
-
-```js
-themeSelector.activate('planning');
-themeSelector.deactivate('planning');
-themeSelector.toggle('nature');
-themeSelector.getActive(); // New array of names in activation order
-themeSelector.deactivateAll();
-themeSelector.refreshLocale();
-
-viewer.removeComponent(themeSelector); // Restore state, detach listeners and remove UI
-```
-
-The activation methods return whether the active set changed. `getActive()`
-returns names in activation order. A removed component can be added again.
-
-## Known limitations
-
-- Use one selector per viewer.
-- Themes resolve layers at activation time. Reordering existing layers is
-  supported; adding/removing layers or replacing source objects while themes
-  are active is not tracked. Deactivate themes before these changes, then
-  activate them again.
-- Active theme names are not saved in permalinks or restored after a reload.
-- Filters require a source with `setFilter()` and `getFilter()` or
-  `getOptions().filter`. WMS and ordinary GeoJSON sources are not filterable
-  through this plugin.
-
-## License
-
-BSD-2-Clause; see [LICENSE](LICENSE). Origo is a separate dependency with its own license.
-The implementation uses its public APIs; no code from the reference plugins is
-redistributed here.
-
+- Deactivation switches selected layers off, including layers already visible before activation. Shared layers can be switched off while another theme remains active.
+- Background and map position are not restored. Unrelated and excluded layers are left alone.
+- Manual changes elsewhere do not update active buttons. Layers and groups added later are not tracked.
+- OpenLayers `GROUP` layers are treated as a whole; their children cannot be selected or excluded individually.
+- No filters, permalink handling or public activation API. Use one selector per map and valid configuration; unknown names are ignored.
+- The panel opens to the right. Custom toolbar placement or narrow embedded maps may need CSS adjustments.
+- Based on Origo `2.11.0-dev`; the simplified version has not yet been verified in a browser.
