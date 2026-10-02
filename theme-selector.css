@@ -1,9 +1,11 @@
-/* Button colors and surfaces come from Origo. */
+/* Button colors, surfaces and tooltips come from Origo. */
 .o-theme-selector {
   position: relative;
   width: max-content;
 }
 
+/* No padding or overflow, so theme buttons line up with the main button
+   and Origo's tooltips are not clipped. */
 .o-theme-selector-panel {
   position: absolute;
   top: 0;
@@ -14,9 +16,12 @@
   gap: .5rem;
   width: max-content;
   max-width: calc(100vw - 5rem);
-  max-height: 60vh;
-  overflow: auto;
-  padding: .25rem;
+}
+
+.o-theme-selector-panel.o-theme-selector-panel-left {
+  left: auto;
+  right: calc(100% + .5rem);
+  justify-content: flex-end;
 }
 
 .o-theme-selector-panel[hidden] {
