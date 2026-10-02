@@ -1,12 +1,15 @@
 # Origo Theme Selector
 
+[![License](https://img.shields.io/github/license/SkovdeGIS/origo-theme-selector-plugin?style=flat-square)](LICENSE)
+[![No build step](https://img.shields.io/badge/build-no%20build%20step-brightgreen?style=flat-square)](#installation)
+
 ## What does it do?
 
 Adds a toolbar button with map themes to Origo. Click a theme to enable its
 layers, select a background and optionally move the map. Click again to switch
 its layers off. Written in vanilla JavaScript, with no build step.
 
-BSD-2-Clause license; see [LICENSE](LICENSE).
+![Origokommuner, Mask, and the combined Båda preset selected in sequence](examples/theme-selector-toggle.gif)
 
 ## Installation
 
