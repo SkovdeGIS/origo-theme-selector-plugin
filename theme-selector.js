@@ -2,7 +2,14 @@
 (function (global) {
   'use strict';
 
+  if (!global.Origo) {
+    console.error('ThemeSelector: Origo must be loaded before theme-selector.js');
+    return;
+  }
+
   const SVG_NS = 'http://www.w3.org/2000/svg';
+  // In material-icons.svg, one of the sprites Origo loads by default.
+  const DEFAULT_ICON = '#ic_map_24px';
 
   function toArray(value) {
     if (Array.isArray(value)) return value;
@@ -64,28 +71,41 @@
       iconObserver = new MutationObserver(resolve);
       iconObserver.observe(document.body, { childList: true });
       iconTimer = setTimeout(() => {
+        // A sprite may have arrived since the last mutation was handled.
+        resolve();
+        if (!pendingIcons.length) return;
         const missing = new Set(pendingIcons.map(item => item.href));
         pendingIcons.forEach(item => {
           console.warn('ThemeSelector: icon not found in any loaded sprite:', item.href);
-          const fallback = missing.has(item.fallback) ? '#o_legend_24px' : item.fallback;
+          const fallback = missing.has(item.fallback) ? DEFAULT_ICON : item.fallback;
           item.use.setAttribute('href', fallback);
         });
         stopWaitingForIcons();
       }, options.iconTimeout || 10000);
     }
 
+    // Without a placement the title is shown as text next to the icon
+    // instead of in a tooltip, which touch screens never display.
     function createButton(title, placement) {
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = 'o-tooltip';
-      button.setAttribute('aria-label', title);
       const svg = document.createElementNS(SVG_NS, 'svg');
       svg.setAttribute('aria-hidden', 'true');
       svg.appendChild(document.createElementNS(SVG_NS, 'use'));
-      const tooltip = document.createElement('span');
-      tooltip.setAttribute('data-tooltip', title);
-      tooltip.setAttribute('data-placement', placement);
-      button.append(svg, tooltip);
+      button.appendChild(svg);
+      if (placement) {
+        button.className = 'o-tooltip';
+        button.setAttribute('aria-label', title);
+        const tooltip = document.createElement('span');
+        tooltip.setAttribute('data-tooltip', title);
+        tooltip.setAttribute('data-placement', placement);
+        button.appendChild(tooltip);
+      } else {
+        const text = document.createElement('span');
+        text.className = 'o-theme-selector-label';
+        text.textContent = title;
+        button.appendChild(text);
+      }
       return button;
     }
 
@@ -113,7 +133,10 @@
       if (focusInside) mainButton.focus();
     }
 
-    function onDocumentClick(event) {
+    // pointerdown, because iOS Safari sends no click to the document when
+    // tapping the map canvas. Listened to in the capture phase so the map
+    // cannot stop it.
+    function onDocumentPointerDown(event) {
       if (!panel.hidden && !root.contains(event.target)) setOpen(false);
     }
 
@@ -165,12 +188,14 @@
         setActive(theme, false);
         updateBackground(null);
       } else {
+        // Activating first keeps layers shared with the replaced theme on,
+        // instead of switching them off and on again.
+        setActive(theme, true);
         if (options.exclusive !== false && !theme.config.combinable) {
           themes.forEach(other => {
-            if (other.active && !other.config.combinable) setActive(other, false);
+            if (other !== theme && other.active && !other.config.combinable) setActive(other, false);
           });
         }
-        setActive(theme, true);
         updateBackground(theme);
         if (hasView(theme.config)) {
           viewer.getMap().getView().animate({ center: theme.config.center, zoom: theme.config.zoom, duration: 600 });
@@ -220,11 +245,12 @@
     function selectLayers(config, layers, groups) {
       const groupNames = new Set(toArray(config.groups));
       if (options.includeSubgroups) {
-        for (const name of groupNames) {
+        // Set.forEach also visits names added during the iteration.
+        groupNames.forEach(name => {
           groups.forEach(group => {
             if (group.parent === name) groupNames.add(group.name);
           });
-        }
+        });
       }
       const names = toArray(config.layers);
       const exclude = toArray(config.exclude);
@@ -250,7 +276,7 @@
           layerListeners.forEach(layer => layer.un('change:visible', onLayerVisibility));
           viewer.getMap().un('change:size', positionPanel);
           document.removeEventListener('keydown', onKeydown);
-          document.removeEventListener('click', onDocumentClick);
+          document.removeEventListener('pointerdown', onDocumentPointerDown, true);
           root.remove();
           root = null;
           viewer = null;
@@ -288,16 +314,16 @@
         const localization = viewer.getControlByName('localization');
         const locale = localization ? localization.getCurrentLocaleId() : 'sv-SE';
         const title = localized(options.title, locale, locale === 'en-US' ? 'Select view' : 'Välj vy');
-        const mainIcon = typeof options.icon === 'string' ? iconHref(options.icon) : '#o_legend_24px';
+        const mainIcon = typeof options.icon === 'string' ? iconHref(options.icon) : DEFAULT_ICON;
 
         root = document.createElement('div');
-        root.className = 'o-theme-selector';
+        root.className = options.labels ? 'o-theme-selector o-theme-selector-labels' : 'o-theme-selector';
         root.id = this.getId();
         mainButton = createButton(title, 'east');
-        setIcon(mainButton, mainIcon, '#o_legend_24px');
+        setIcon(mainButton, mainIcon, DEFAULT_ICON);
         panel = document.createElement('div');
         panel.className = 'o-theme-selector-panel';
-        panel.id = root.id + '-panel';
+        panel.id = `${root.id}-panel`;
         panel.setAttribute('role', 'group');
         panel.setAttribute('aria-label', title);
         mainButton.setAttribute('aria-controls', panel.id);
@@ -307,7 +333,7 @@
 
         configs.forEach(config => {
           const label = localized(config.title, locale, config.name);
-          const button = createButton(label, 'south');
+          const button = createButton(label, options.labels ? null : 'south');
           validate(config, layers, groups);
           setIcon(button, typeof config.icon === 'string' ? iconHref(config.icon) : mainIcon, mainIcon);
           const theme = {
@@ -344,7 +370,7 @@
         // OpenLayers updates the map size on window and container resizes.
         viewer.getMap().on('change:size', positionPanel);
         document.addEventListener('keydown', onKeydown);
-        document.addEventListener('click', onDocumentClick);
+        document.addEventListener('pointerdown', onDocumentPointerDown, true);
         waitForIcons();
       }
     });

@@ -30,7 +30,7 @@ Add this inside your existing map's `load` handler in `index.html`:
 origo.on('load', function (viewer) {
   viewer.addComponent(ThemeSelector({
     exclusive: true,
-    icon: '#o_legend_24px',
+    icon: '#ic_map_24px',
     themes: [
       {
         name: 'planning',
@@ -69,8 +69,9 @@ configuration on top, so background layers go last.
 | --- | --- | --- |
 | `themes` | `[]` | Array of themes, see below. Nothing is rendered without themes. |
 | `exclusive` | `true` | Activating a normal theme deactivates other normal themes. Set `false` to allow all themes together. |
+| `labels` | `false` | Set `true` to show each theme's title as text next to its icon in the panel, instead of only in a tooltip. Recommended for maps used on touch screens, where tooltips never appear. |
 | `title` | `Välj vy` / `Select view` | Main button title. String or `{ 'sv-SE': …, 'en-US': … }`. |
-| `icon` | `#o_legend_24px` | Main button icon, and the fallback for themes whose icon is missing. |
+| `icon` | `#ic_map_24px` | Main button icon, and the fallback for themes whose icon is missing. |
 | `iconPrefix` | `#` | Prefix for icons given without `#`. With `'#theme_'`, `icon: 'park'` means `#theme_park`. |
 | `target` | Origo's navigation | Container ID. |
 | `before` | `.o-zoom` | Selector of the element in the target to insert the button before. Set `false` to append it last. |
@@ -100,7 +101,7 @@ is added.
 - If the user switches off every layer of an active theme elsewhere, for example in the legend, its button is deactivated as well.
 - The panel opens to the left when it does not fit inside the map, checked when it opens and when the map is resized. Themes wrap onto more rows when the panel is wider than the screen.
 - The panel closes with Escape or a click outside it. Escape only moves focus back to the main button if focus was inside the selector.
-- Buttons use Origo's own tooltip and `aria-pressed`; the panel is a labelled group controlled by the main button.
+- Buttons use Origo's own tooltip and `aria-pressed`; the panel is a labelled group controlled by the main button. With `labels: true` the theme buttons show their title as text and have no tooltip.
 - Titles use Origo's language when the selector is added. Origo reloads the page when the language changes.
 
 ## Limitations
@@ -110,4 +111,12 @@ is added.
 - Layers and groups added after the selector are not tracked.
 - OpenLayers `GROUP` layers are treated as a whole; their children cannot be selected or excluded individually.
 - No source filters, permalink handling or public activation API. Use one selector per map.
-- Verified with Origo `2.11.0-dev`.
+
+## Compatibility
+
+- Verified with Origo `2.11.0-dev`. Other versions are untested; please open an issue if the selector does not work with yours.
+- Uses these Origo APIs: `Origo.ui.Component`, `viewer.addComponent`, `getLayers`, `getGroups`, `getMain().getNavigation()` and, if present, the `localization` control. Buttons rely on Origo's `o-tooltip` CSS.
+- Origo must be loaded before `theme-selector.js`; otherwise the selector logs an error and is not defined.
+- Needs a current browser (Chrome, Edge, Firefox, Safari). Internet Explorer is not supported.
+
+See [CHANGELOG.md](CHANGELOG.md) for changes between versions.
