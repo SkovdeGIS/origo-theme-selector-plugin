@@ -114,7 +114,7 @@ is added.
 
 ## Compatibility
 
-- Verified with Origo `2.11.0-dev`. Other versions are untested; please open an issue if the selector does not work with yours.
+- Verified with Origo `2.10.0` (the latest release) and `2.11.0-dev` (`master` in October 2026), with both `origo.js` and `origo.min.js`. Older versions are untested; please open an issue if the selector does not work with yours.
 - Uses these Origo APIs: `Origo.ui.Component`, `viewer.addComponent`, `getLayers`, `getGroups`, `getMain().getNavigation()` and, if present, the `localization` control. Buttons rely on Origo's `o-tooltip` CSS.
 - Origo must be loaded before `theme-selector.js`; otherwise the selector logs an error and is not defined.
 - Needs a current browser (Chrome, Edge, Firefox, Safari). Internet Explorer is not supported.
