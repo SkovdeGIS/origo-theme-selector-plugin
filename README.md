@@ -69,7 +69,7 @@ configuration on top, so background layers go last.
 | --- | --- | --- |
 | `themes` | `[]` | Array of themes, see below. Nothing is rendered without themes. |
 | `exclusive` | `true` | Activating a normal theme deactivates other normal themes. Set `false` to allow all themes together. |
-| `labels` | `false` | Set `true` to show each theme's title as text next to its icon in the panel, instead of only in a tooltip. Recommended for maps used on touch screens, where tooltips never appear. |
+| `labels` | `false` | Set `true` to show the titles of the main button and the themes as text next to their icons, instead of only in a tooltip. Recommended for maps used on touch screens, where tooltips never appear. |
 | `title` | `Välj vy` / `Select view` | Main button title. String or `{ 'sv-SE': …, 'en-US': … }`. |
 | `icon` | `#ic_map_24px` | Main button icon, and the fallback for themes whose icon is missing. |
 | `iconPrefix` | `#` | Prefix for icons given without `#`. With `'#theme_'`, `icon: 'park'` means `#theme_park`. |
@@ -101,7 +101,7 @@ is added.
 - If the user switches off every layer of an active theme elsewhere, for example in the legend, its button is deactivated as well.
 - The panel opens to the left when it does not fit inside the map, checked when it opens and when the map is resized. Themes wrap onto more rows when the panel is wider than the screen.
 - The panel closes with Escape or a click outside it. Escape only moves focus back to the main button if focus was inside the selector.
-- Buttons use Origo's own tooltip and `aria-pressed`; the panel is a labelled group controlled by the main button. With `labels: true` the theme buttons show their title as text and have no tooltip.
+- Buttons use Origo's own tooltip and `aria-pressed`; the panel is a labelled group controlled by the main button. With `labels: true` all buttons show their title as text and have no tooltip.
 - Titles use Origo's language when the selector is added. Origo reloads the page when the language changes.
 
 ## Limitations

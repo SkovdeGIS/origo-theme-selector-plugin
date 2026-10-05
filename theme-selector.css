@@ -83,9 +83,10 @@
   fill: #ffffff;
 }
 
-/* labels: true shows the title next to the icon in the panel. */
-.o-theme-selector-labels .o-theme-selector-panel button {
+/* labels: true shows the title next to the icon on every button. */
+.o-theme-selector-labels button {
   width: auto;
+  max-width: 100%;
   display: flex;
   align-items: center;
   gap: 0.375rem;
@@ -98,10 +99,21 @@
   color: hsl(0, 0%, 29%);
 }
 
-.o-theme-selector-labels .o-theme-selector-panel button svg {
+.o-theme-selector-labels button svg {
   flex: none;
+}
+
+/* Long titles are cut with an ellipsis instead of widening the panel. */
+.o-theme-selector-labels .o-theme-selector-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .o-theme-selector-labels .o-theme-selector-panel button.active {
   color: #ffffff;
+}
+
+.o-theme-selector-labels > button.active {
+  color: hsl(205, 100%, 48%);
 }

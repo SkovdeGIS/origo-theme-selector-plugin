@@ -319,7 +319,7 @@
         root = document.createElement('div');
         root.className = options.labels ? 'o-theme-selector o-theme-selector-labels' : 'o-theme-selector';
         root.id = this.getId();
-        mainButton = createButton(title, 'east');
+        mainButton = createButton(title, options.labels ? null : 'east');
         setIcon(mainButton, mainIcon, DEFAULT_ICON);
         panel = document.createElement('div');
         panel.className = 'o-theme-selector-panel';

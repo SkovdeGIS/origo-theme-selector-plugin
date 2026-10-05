@@ -2,11 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
-## Unreleased
+## 1.0.0 - 2026-10-05
 
 ### Added
 
-- `labels` option that shows theme titles as text in the panel, for touch screens.
+- `labels` option that shows the titles of the main button and the themes as text, for touch screens. Long titles are cut with an ellipsis.
 - A clear console error when Origo is not loaded before the plugin.
 - Compatibility section in the README.
 
