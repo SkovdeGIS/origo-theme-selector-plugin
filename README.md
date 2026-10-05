@@ -10,7 +10,7 @@ themes: click a theme to enable its layers, select a background and optionally
 move the map. Click again to switch its layers off and get the previous
 background back. Written in vanilla JavaScript, with no build step.
 
-![The Planning, Nature and Buildings themes selected in sequence](examples/theme-selector-toggle.gif)
+![The Planning, Services, Buildings and Nature themes switched in sequence, lighting several layers each](examples/theme-selector-toggle.gif)
 
 ## Installation
 
@@ -58,7 +58,10 @@ Use your own group and layer names, and coordinates in the map's projection.
 Themes can also live in your map's JSON configuration and be passed in from
 there. A complete example is in [examples/index.html](examples/index.html).
 Serve it from `plugins/theme-selector/examples/` in an Origo installation. Its
-orthophoto is an empty placeholder; replace it with your own imagery layer.
+layers are made-up demo data around Skövde, with OpenStreetMap and
+[Sentinel-2 cloudless](https://s2maps.eu) by EOX (CC BY 4.0) as backgrounds,
+so the example needs an internet connection. Origo draws the first layer in the
+configuration on top, so background layers go last.
 
 ## Configuration
 
@@ -82,16 +85,20 @@ orthophoto is an empty placeholder; replace it with your own imagery layer.
 | `groups` | Enable layers in these Origo groups. Nested groups only with `includeSubgroups`. |
 | `layers` | Explicit layer names to enable. |
 | `exclude` | Exclude layer names from group selection. Explicit `layers` entries take precedence. |
-| `background` | Switch to this layer in the `background` group. When the last theme with a background is switched off, the previous background comes back. |
+| `background` | Switch to this layer in the `background` group. When no active theme has a background any longer, the previous background comes back, unless the background was changed elsewhere. |
 | `center`, `zoom` | Supply both, as numbers, to move the map when activated. |
 | `combinable` | Defaults to `false`. Set `true` to keep this theme active alongside a normal theme. |
 
-`groups`, `layers` and `exclude` accept an array or a single name.
+`groups`, `layers` and `exclude` accept an array or a single name. Unknown
+layers, groups and backgrounds, background layers listed in `layers`, invalid
+`center`/`zoom` and non-string icons give a console warning when the selector
+is added.
 
 ## Behaviour
 
 - A layer shared by two active themes stays on when one of them is switched off.
 - If the user switches off every layer of an active theme elsewhere, for example in the legend, its button is deactivated as well.
+- The panel opens to the left when it does not fit inside the map, checked when it opens and when the map is resized. Themes wrap onto more rows when the panel is wider than the screen.
 - The panel closes with Escape or a click outside it. Escape only moves focus back to the main button if focus was inside the selector.
 - Buttons use Origo's own tooltip and `aria-pressed`; the panel is a labelled group controlled by the main button.
 - Titles use Origo's language when the selector is added. Origo reloads the page when the language changes.
@@ -103,5 +110,4 @@ orthophoto is an empty placeholder; replace it with your own imagery layer.
 - Layers and groups added after the selector are not tracked.
 - OpenLayers `GROUP` layers are treated as a whole; their children cannot be selected or excluded individually.
 - No source filters, permalink handling or public activation API. Use one selector per map.
-- The panel opens to the right of the button, so a toolbar on the right side of the map needs CSS adjustments.
 - Verified with Origo `2.11.0-dev`.

@@ -24,7 +24,10 @@
     let mainButton;
     let themes = [];
     let backgrounds = [];
-    let baseline = null;
+    // Background visible before the first theme background was applied:
+    // undefined when none is applied, null when no background was visible.
+    let baseline;
+    let appliedBackground = null;
     let busy = false;
     let checkQueued = false;
     let layerListeners = [];
@@ -34,7 +37,7 @@
     let iconTimer = null;
 
     function iconHref(icon) {
-      return icon.startsWith('#') ? icon : (options.iconPrefix || '#') + icon;
+      return icon.charAt(0) === '#' ? icon : (options.iconPrefix || '#') + icon;
     }
 
     function setIcon(button, href, fallback) {
@@ -86,9 +89,21 @@
       return button;
     }
 
+    // Opens to the left when the panel does not fit inside the map.
+    function positionPanel() {
+      if (!panel || panel.hidden) return;
+      panel.classList.remove('o-theme-selector-panel-left');
+      const mapElement = viewer.getMap().getTargetElement();
+      const right = mapElement ? mapElement.getBoundingClientRect().right : window.innerWidth;
+      if (panel.getBoundingClientRect().right > right) {
+        panel.classList.add('o-theme-selector-panel-left');
+      }
+    }
+
     function setOpen(open) {
       panel.hidden = !open;
       mainButton.setAttribute('aria-expanded', String(open));
+      positionPanel();
     }
 
     function onKeydown(event) {
@@ -102,14 +117,29 @@
       if (!panel.hidden && !root.contains(event.target)) setOpen(false);
     }
 
-    function visibleBackground() {
-      const layer = backgrounds.find(item => item.getVisible());
-      return layer ? layer.get('name') : null;
+    function showBackground(target) {
+      backgrounds.forEach(layer => layer.setVisible(layer === target));
     }
 
-    function showBackground(name) {
-      const target = backgrounds.find(layer => layer.get('name') === name);
-      if (target) backgrounds.forEach(layer => layer.setVisible(layer === target));
+    // Shows the background of the newest theme that has one. When no active
+    // theme has a background, the original one comes back, unless the
+    // background has been changed elsewhere in the meantime.
+    function updateBackground(activated) {
+      const withBackground = themes.filter(theme => theme.active && theme.background);
+      if (!withBackground.length) {
+        if (baseline !== undefined && appliedBackground && appliedBackground.getVisible()) showBackground(baseline);
+        baseline = undefined;
+        appliedBackground = null;
+        return;
+      }
+      let layer = activated && activated.background;
+      if (!layer) {
+        if (withBackground.some(theme => theme.background === appliedBackground)) return;
+        layer = withBackground[withBackground.length - 1].background;
+      }
+      if (baseline === undefined) baseline = backgrounds.find(item => item.getVisible()) || null;
+      showBackground(layer);
+      appliedBackground = layer;
     }
 
     function setActive(theme, active) {
@@ -124,19 +154,16 @@
       mainButton.classList.toggle('active', themes.some(item => item.active));
     }
 
-    function moveView(config) {
+    function hasView(config) {
       const center = config.center;
-      if (!Array.isArray(center) || center.length !== 2 || !center.every(Number.isFinite) || !Number.isFinite(config.zoom)) return;
-      viewer.getMap().getView().animate({ center, zoom: config.zoom, duration: 600 });
+      return Array.isArray(center) && center.length === 2 && center.every(Number.isFinite) && Number.isFinite(config.zoom);
     }
 
-    function toggleTheme(theme, automatic) {
+    function toggleTheme(theme) {
       busy = true;
-      const before = themes.map(item => item.active);
-      const backgroundBefore = visibleBackground();
-
       if (theme.active) {
         setActive(theme, false);
+        updateBackground(null);
       } else {
         if (options.exclusive !== false && !theme.config.combinable) {
           themes.forEach(other => {
@@ -144,24 +171,9 @@
           });
         }
         setActive(theme, true);
-        if (theme.config.background) showBackground(theme.config.background);
-        moveView(theme.config);
-      }
-
-      if (!automatic) {
-        const startedWithBackground = theme.active && theme.config.background;
-        const endedWithBackground = themes.some((item, i) => before[i] && !item.active && item.config.background);
-        if (startedWithBackground && !themes.some((item, i) => before[i] && item.config.background)) {
-          baseline = backgroundBefore;
-        }
-        if (endedWithBackground && !startedWithBackground) {
-          const remaining = themes.find(item => item.active && item.config.background);
-          if (remaining) {
-            showBackground(remaining.config.background);
-          } else if (baseline) {
-            showBackground(baseline);
-            baseline = null;
-          }
+        updateBackground(theme);
+        if (hasView(theme.config)) {
+          viewer.getMap().getView().animate({ center: theme.config.center, zoom: theme.config.zoom, duration: 600 });
         }
       }
       busy = false;
@@ -172,7 +184,7 @@
       if (!root) return;
       themes.forEach(theme => {
         if (theme.active && theme.layers.length && !theme.layers.some(layer => layer.getVisible())) {
-          toggleTheme(theme, true);
+          toggleTheme(theme);
         }
       });
     }
@@ -181,6 +193,28 @@
       if (busy || checkQueued) return;
       checkQueued = true;
       queueMicrotask(checkActiveThemes);
+    }
+
+    // Warns about names and values that do not match the map.
+    function validate(config, layers, groups) {
+      const warn = message => console.warn(`ThemeSelector: theme "${config.name}": ${message}`);
+      const layerNames = new Set(layers.map(layer => layer.get('name')));
+      const groupNames = new Set(groups.map(group => group.name));
+      const isBackground = name => backgrounds.some(layer => layer.get('name') === name);
+      toArray(config.layers).concat(toArray(config.exclude)).forEach(name => {
+        if (!layerNames.has(name)) warn(`unknown layer ${name}`);
+        else if (isBackground(name)) warn(`${name} is a background layer; use background`);
+      });
+      toArray(config.groups).forEach(name => {
+        if (!groupNames.has(name)) warn(`unknown group ${name}`);
+      });
+      if (config.background !== undefined && !isBackground(config.background)) {
+        warn(`unknown background ${config.background}`);
+      }
+      if ((config.center !== undefined || config.zoom !== undefined) && !hasView(config)) {
+        warn('center must be [x, y] and zoom a number; the map will not move');
+      }
+      if (config.icon !== undefined && typeof config.icon !== 'string') warn('icon must be a string');
     }
 
     function selectLayers(config, layers, groups) {
@@ -206,11 +240,15 @@
       onInit() {
         this.on('clear', () => {
           if (!root) return;
+          busy = true;
           themes.forEach(theme => {
             if (theme.active) setActive(theme, false);
           });
+          updateBackground(null);
+          busy = false;
           stopWaitingForIcons();
           layerListeners.forEach(layer => layer.un('change:visible', onLayerVisibility));
+          viewer.getMap().un('change:size', positionPanel);
           document.removeEventListener('keydown', onKeydown);
           document.removeEventListener('click', onDocumentClick);
           root.remove();
@@ -219,7 +257,6 @@
           themes = [];
           backgrounds = [];
           layerListeners = [];
-          baseline = null;
         });
       },
       onAdd(event) {
@@ -251,7 +288,7 @@
         const localization = viewer.getControlByName('localization');
         const locale = localization ? localization.getCurrentLocaleId() : 'sv-SE';
         const title = localized(options.title, locale, locale === 'en-US' ? 'Select view' : 'Välj vy');
-        const mainIcon = options.icon ? iconHref(options.icon) : '#o_legend_24px';
+        const mainIcon = typeof options.icon === 'string' ? iconHref(options.icon) : '#o_legend_24px';
 
         root = document.createElement('div');
         root.className = 'o-theme-selector';
@@ -271,10 +308,17 @@
         configs.forEach(config => {
           const label = localized(config.title, locale, config.name);
           const button = createButton(label, 'south');
-          setIcon(button, config.icon ? iconHref(config.icon) : mainIcon, mainIcon);
-          const theme = { config, layers: selectLayers(config, layers, groups), button, active: false };
+          validate(config, layers, groups);
+          setIcon(button, typeof config.icon === 'string' ? iconHref(config.icon) : mainIcon, mainIcon);
+          const theme = {
+            config,
+            layers: selectLayers(config, layers, groups),
+            background: backgrounds.find(layer => layer.get('name') === config.background) || null,
+            button,
+            active: false
+          };
           button.setAttribute('aria-pressed', 'false');
-          button.addEventListener('click', () => toggleTheme(theme, false));
+          button.addEventListener('click', () => toggleTheme(theme));
           themes.push(theme);
           panel.appendChild(button);
         });
@@ -284,12 +328,21 @@
           layerListeners.push(layer);
         });
 
-        const before = options.before === false ? null : target.querySelector(options.before || '.o-zoom');
+        let before = null;
+        if (options.before !== false) {
+          try {
+            before = target.querySelector(options.before || '.o-zoom');
+          } catch (error) {
+            console.warn('ThemeSelector: invalid before selector:', options.before);
+          }
+        }
         if (before && before.parentElement === target) {
           target.insertBefore(root, before);
         } else {
           target.appendChild(root);
         }
+        // OpenLayers updates the map size on window and container resizes.
+        viewer.getMap().on('change:size', positionPanel);
         document.addEventListener('keydown', onKeydown);
         document.addEventListener('click', onDocumentClick);
         waitForIcons();

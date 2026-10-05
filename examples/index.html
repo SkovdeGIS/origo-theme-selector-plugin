@@ -27,16 +27,26 @@
             title: { 'sv-SE': 'Planering', 'en-US': 'Planning' },
             icon: '#ic_place_24px',
             groups: ['planning'],
-            exclude: ['buildings']
+            exclude: ['buildings'],
+            center: [1541218, 8049694],
+            zoom: 13
           },
           {
             name: 'nature',
             title: { 'sv-SE': 'Natur', 'en-US': 'Nature' },
             icon: '#o_polygon_24px',
-            layers: ['nature'],
-            background: 'orthophoto',
-            center: [0, 0],
-            zoom: 3
+            groups: ['nature'],
+            background: 'satellite',
+            center: [1530086, 8052881],
+            zoom: 13
+          },
+          {
+            name: 'service',
+            title: { 'sv-SE': 'Service', 'en-US': 'Services' },
+            icon: '#ic_home_24px',
+            layers: ['schools', 'preschools', 'health'],
+            center: [1541218, 8049694],
+            zoom: 13
           },
           {
             name: 'buildings',
